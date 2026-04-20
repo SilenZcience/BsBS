@@ -27,20 +27,56 @@ pub enum ComBaseAddress {
 /// Struct representing a COM port
 pub struct ComPort {
     /// IO-port where output is written to
-    data_port: IoPort
+    data_port: IoPort,
+    /// Interrupt control register (i.e., enable/disable interrupts)
+    interrupt_control_port: IoPort,
+    /// Configuration register for the line protocol (e.g., baud rate)
+    line_control_port: IoPort,
+    /// Status register for the line protocol (e.g., ready to read or write)
+    line_status_port: IoPort,
 }
 
 impl ComPort {
     /// Create a new COM port
     pub const fn new(base_addr: ComBaseAddress) -> ComPort {
         ComPort {
-            data_port: IoPort::new(base_addr as u16)
+            data_port: IoPort::new(base_addr as u16),
+            interrupt_control_port: IoPort::new(base_addr as u16 + 1),
+            line_control_port: IoPort::new(base_addr as u16 + 3),
+            line_status_port: IoPort::new(base_addr as u16 + 5),
+        }
+    }
+
+    /// Initialize the COM port.
+    /// This function disables interrupts and sets the baud rate to 115200 (max rate)
+    /// with 8 data bits, 1 stop bit, and no parity bits.
+    pub fn init(&mut self) {
+        unsafe {
+            // Disable all interrupts
+            self.interrupt_control_port.outb(0x00);
+
+            // Enable DLAB, so that the divisor can be set
+            self.line_control_port.outb(0x80);
+
+            // Set divisor to 1 (115200 baud)
+            self.data_port.outb(0x01); // Divisor low byte
+            self.interrupt_control_port.outb(0x00); // Divisor high byte
+
+            // Set line protocol configuration: 8 data bits, 1 stop bit, no parity
+            self.line_control_port.outb(0x03);
         }
     }
 
     /// Write a single byte to the COM port.
     pub fn write_byte(&mut self, byte: u8) {
+        const READY_TO_WRITE: u8 = 0x20; // Transmitter Holding Register Empty
         unsafe {
+            // If the byte is a newline, write carriage return first
+            if byte == b'\n' {
+                self.write_byte(b'\r');
+            }
+            // Wait until the port is ready to accept data
+            while self.line_status_port.inb() & READY_TO_WRITE == 0 {}
             self.data_port.outb(byte);
         }
     }

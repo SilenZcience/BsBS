@@ -21,9 +21,9 @@ use log::{debug, error, info};
 use core::fmt::Write;
 use uefi::mem::memory_map::MemoryMapOwned;
 use crate::device::framebuffer::Framebuffer;
+use crate::device::serial::COM1;
 use crate::device::terminal;
 use crate::logger::Logger;
-use crate::device::serial::COM1;
 
 #[macro_use]
 mod device;
@@ -45,8 +45,9 @@ static LOGGER: Logger = Logger::new();
 /// This function is called from `boot.asm` after the bare minimum setup is done.
 /// It sets up all necessary kernel components and then starts the scheduler.
 pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) -> ! {
-    // The first thing to do is to initialize the logger.
+    // The first thing to do is to initialize the serial port and logger.
     // Afterward, we can use logging macros like `info!()` and `error!()` and panic messages will also be logged.
+    COM1.lock().init();
     if log::set_logger(&LOGGER).is_err() {
         panic!("Failed to initialize logger");
     }
@@ -81,8 +82,8 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }
 
-    crate::demo::lesson1::text_demo();
     crate::demo::lesson1::keyboard_demo();
+    crate::demo::lesson1::text_demo();
 
     info!("Hello from the kernel!");
     info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);
