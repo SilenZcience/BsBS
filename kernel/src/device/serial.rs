@@ -6,6 +6,7 @@
  */
 
 use core::fmt;
+use bitflags::bitflags;
 use crate::library::spinlock::Spinlock;
 use crate::device::cpu::IoPort;
 
@@ -23,6 +24,23 @@ pub enum ComBaseAddress {
     Com3 = 0x3e8,
     Com4 = 0x2e8,
 }
+
+bitflags! {
+    /// Status flags for the line protocol.
+    /// The most important one for use is `READY_TO_WRITE`, as it indicates
+    /// whether we can currently write to the data port or need to wait.
+    pub struct LineStatus: u8 {
+        const READY_TO_READ = 0x01;
+        const OVERRUN_ERROR = 0x02;
+        const PARITY_ERROR = 0x04;
+        const FRAMING_ERROR = 0x08;
+        const BREAK_INDICATOR = 0x10;
+        const READY_TO_WRITE = 0x20;
+        const TRANSMITTER_EMPTY = 0x0f;
+        const IMPENDING_ERROR = 0x01;
+    }
+}
+
 
 /// Struct representing a COM port
 pub struct ComPort {
@@ -69,14 +87,13 @@ impl ComPort {
 
     /// Write a single byte to the COM port.
     pub fn write_byte(&mut self, byte: u8) {
-        const READY_TO_WRITE: u8 = 0x20; // Transmitter Holding Register Empty
         unsafe {
             // If the byte is a newline, write carriage return first
             if byte == b'\n' {
                 self.write_byte(b'\r');
             }
             // Wait until the port is ready to accept data
-            while self.line_status_port.inb() & READY_TO_WRITE == 0 {}
+            while self.line_status_port.inb() & LineStatus::READY_TO_WRITE.bits() == 0 {}
             self.data_port.outb(byte);
         }
     }
