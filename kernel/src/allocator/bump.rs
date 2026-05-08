@@ -9,6 +9,7 @@
 use alloc::alloc::{GlobalAlloc, Layout};
 use crate::allocator::global::{align_up, Locked};
 use core::ptr::null_mut;
+use core::fmt::Write;
 use log::info;
 
 /// A simple bump allocator that allocates memory in a linear fashion.
@@ -40,8 +41,10 @@ impl BumpAllocator {
     }
 
     /// Dump free memory for debugging purposes.
-    pub fn dump_free_list(&mut self) {
-        info!("bump: heap_start={:#x}, heap_end={:#x}, next={:#x}, allocations={}", self.heap_start, self.heap_end, self.next, self.allocations);
+    pub fn dump_free_list(&mut self, writer: &mut dyn Write) {
+        writeln!(writer, "Bump Allocator:").unwrap();
+        writeln!(writer, "  Heap start: 0x{:x}, Heap end: 0x{:x}", self.heap_start, self.heap_end).unwrap();
+        writeln!(writer, "  Next free: 0x{:x}, Allocations: {}", self.next, self.allocations).unwrap();
     }
 
     /// Allocate memory of the given size and alignment.

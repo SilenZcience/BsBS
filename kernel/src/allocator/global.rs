@@ -17,12 +17,14 @@
  */
 
 use alloc::alloc::Layout;
-use crate::allocator::bump::BumpAllocator;
+// use crate::allocator::bump::BumpAllocator; // NOTE: old bump allocator
+use crate::allocator::list::LinkedListAllocator;
 use crate::library::spinlock::{Spinlock, SpinlockGuard};
 
 #[global_allocator]
 /// Global heap allocator instance, used by the Rust compiler for dynamic memory allocation.
-static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
+// static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new()); // NOTE: old bump allocator
+static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator::new());
 
 /// Helper function used in `bump.rs` and `list.rs`. Rust requires pointers to be aligned.
 pub fn align_up(addr: usize, align: usize) -> usize {
@@ -55,10 +57,10 @@ pub fn dealloc(ptr: *mut u8, layout: Layout) {
     }
 }
 
-/// Dump heap free list. Must be called by own program.
+/// Dump heap free list to a writer. Must be called by own program.
 /// Can be used for debugging the heap allocator.
-pub fn dump_free_list() {
-    ALLOCATOR.lock().dump_free_list();
+pub fn dump_free_list<W: core::fmt::Write>(writer: &mut W) {
+    ALLOCATOR.lock().dump_free_list(writer);
 }
 
 /// A wrapper around `Spinlock` to allow for trait implementations.

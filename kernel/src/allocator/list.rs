@@ -9,6 +9,9 @@
 use alloc::alloc::{GlobalAlloc, Layout};
 use log::info;
 use crate::allocator::global::{align_up, Locked};
+use core::mem::{size_of, align_of};
+use core::ptr::null_mut;
+use core::fmt::Write;
 
 /// Header of a free block in the list allocator.
 struct ListNode {
@@ -59,22 +62,55 @@ impl LinkedListAllocator {
 
     /// Initialize the allocator with the heap bounds given in the constructor.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
-        todo!("list::init() is not implemented yet.")
+        self.heap_start = heap_start;
+        self.heap_end = heap_start + heap_size;
+        unsafe {
+            self.add_free_block(heap_start, heap_size);
+        }
     }
 
     /// Adds the given free memory block 'addr' to the front of the free list.
     unsafe fn add_free_block(&mut self, addr: usize, size: usize) {
-        todo!("list::add_free_block() is not implemented yet.")
+        let new_node = addr as *mut ListNode;
+
+        unsafe {
+            // head, new_node --> head.next
+            *new_node = ListNode {
+                size,
+                next: self.head.next.take(),
+            };
+        }
+
+        // head --> new_node --> head.next
+        self.head.next = Some(unsafe { &mut *new_node });
     }
 
     /// Search a free block with the given size and alignment and remove it from the list.
     fn find_free_block(&mut self, size: usize, align: usize) -> Option<(&'static mut ListNode, usize)> {
-        todo!("list::find_free_block() is not implemented yet.")
+        let mut current = &mut self.head;
+
+        while let Some(_) = current.next.as_mut() {
+            if let Ok(alloc_start) = Self::check_block_for_alloc(current.next.as_ref().unwrap(), size, align) {
+                // current --> node == current.next
+                let node = current.next.take().unwrap();
+                // current --> node.next == current.next.next
+                current.next = node.next.take();
+                return Some((node, alloc_start));
+            }
+            current = current.next.as_mut().unwrap();
+        }
+        None
     }
 
     /// Check if the given block is large enough for an allocation with `size` and `align`.
     fn check_block_for_alloc(block: &ListNode, size: usize, align: usize) -> Result<usize,()> {
-        todo!("list::check_block_for_alloc() is not implemented yet.")
+        let alloc_start = align_up(block.start_addr(), align);
+        let alloc_end = alloc_start.checked_add(size).ok_or(())?;
+
+        if alloc_end > block.end_addr() {
+            return Err(());
+        }
+        Ok(alloc_start)
     }
 
     /// Adjust the given layout so that the resulting allocated memory
@@ -90,13 +126,36 @@ impl LinkedListAllocator {
     }
 
     /// Dump the free list for debugging purposes.
-    pub fn dump_free_list(&mut self) {
-        todo!("list::dump_free_list() is not implemented yet.")
+    pub fn dump_free_list(&mut self, writer: &mut dyn Write) {
+        writeln!(writer, "Free blocks:").ok();
+        let mut current = self.head.next.as_ref();
+        while let Some(node) = current {
+            writeln!(writer, "  block: start={:#x}, size={:#x}, end={:#x}", node.start_addr(), node.size, node.end_addr()).ok();
+            current = node.next.as_ref();
+        }
     }
 
     /// Allocate memory of the given size and alignment.
     pub unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
-        todo!("list::alloc() is not implemented yet.")
+        let (size, align) = Self::size_align(layout);
+
+        if let Some((block, alloc_start)) = self.find_free_block(size, align) {
+            let alloc_end = alloc_start + size;
+            let excess_size = block.end_addr() - alloc_end;
+
+            // If there's leftover space large enough to store a ListNode, add it back to the list
+            if excess_size >= size_of::<ListNode>() {
+                unsafe {
+                    self.add_free_block(alloc_end, excess_size);
+                }
+            } else if excess_size > 0 {
+                info!("Warning: leftover block of size {} got lost in limbo!", excess_size);
+            }
+
+            alloc_start as *mut u8
+        } else {
+            null_mut()
+        }
     }
 
     /// Free the memory block at the given pointer with the given layout.
