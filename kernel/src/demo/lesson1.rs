@@ -19,9 +19,7 @@ pub fn text_demo() {
         writeln!(
             term,
             "  | {:>3} | {:>3x} | {:>7b} |",
-            i,
-            i,
-            i
+            i, i, i
         ).unwrap();
     }
 }
@@ -29,7 +27,6 @@ pub fn text_demo() {
 /// A simple keyboard demo, displaying the events of key presses and releases.
 pub fn keyboard_demo() {
     use crate::device::keyboard::KEYBOARD;
-    use crate::device::key::KeyEvent;
     use core::fmt::Write;
     let mut term = terminal().lock();
     writeln!(term, "Keyboard Demo: Press keys to see events. Press ESC to exit.").unwrap();
@@ -46,7 +43,7 @@ pub fn keyboard_demo() {
             None => write!(term, "None").unwrap(),
         }
         write!(term, " modifiers: {:?} pressed: {}\n", event.modifiers(), pressed).unwrap();
-        // Exit on ESC key press (check scancode and pressed)
+        // Exit on ESC key press
         if let Some(sc) = event.scancode() {
             if sc == crate::device::key::Scancode::Escape && event.pressed() {
                 break;
