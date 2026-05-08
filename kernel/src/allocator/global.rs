@@ -59,8 +59,8 @@ pub fn dealloc(ptr: *mut u8, layout: Layout) {
 
 /// Dump heap free list to a writer. Must be called by own program.
 /// Can be used for debugging the heap allocator.
-pub fn dump_free_list<W: core::fmt::Write>(writer: &mut W) {
-    ALLOCATOR.lock().dump_free_list(writer);
+pub fn dump_free_list() {
+    ALLOCATOR.lock().dump_free_list();
 }
 
 /// A wrapper around `Spinlock` to allow for trait implementations.

@@ -9,7 +9,6 @@
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{AtomicBool, Ordering};
-use core::fmt::Write;
 
 /// A simple spinlock implementation that spins in a loop until it acquires the lock.
 /// It uses an atomic boolean to represent the lock state.
@@ -111,11 +110,5 @@ impl<'a, T> DerefMut for SpinlockGuard<'a, T> {
 impl<'a, T> Drop for SpinlockGuard<'a, T> {
     fn drop(&mut self) {
         self.lock.unlock();
-    }
-}
-
-impl<'a, T: Write> Write for SpinlockGuard<'a, T> {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        T::write_str(&mut *self, s)
     }
 }

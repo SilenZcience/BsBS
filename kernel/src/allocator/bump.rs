@@ -41,10 +41,10 @@ impl BumpAllocator {
     }
 
     /// Dump free memory for debugging purposes.
-    pub fn dump_free_list(&mut self, writer: &mut dyn Write) {
-        writeln!(writer, "Bump Allocator:").unwrap();
-        writeln!(writer, "  Heap start: 0x{:x}, Heap end: 0x{:x}", self.heap_start, self.heap_end).unwrap();
-        writeln!(writer, "  Next free: 0x{:x}, Allocations: {}", self.next, self.allocations).unwrap();
+    pub fn dump_free_list(&mut self) {
+        println!("Bump Allocator:");
+        println!("  Heap start: 0x{:x}, Heap end: 0x{:x}", self.heap_start, self.heap_end);
+        println!("  Next free: 0x{:x}, Allocations: {}", self.next, self.allocations);
     }
 
     /// Allocate memory of the given size and alignment.

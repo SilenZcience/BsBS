@@ -8,9 +8,7 @@
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::fmt::Write;
 use core::mem::size_of;
-use crate::device::terminal::terminal;
 use crate::device::keyboard::KEYBOARD;
 use crate::device::key::Scancode;
 use crate::device::speaker;
@@ -18,114 +16,122 @@ use crate::device::speaker::SPEAKER;
 
 /// A simple heap demo, allocating and freeing memory on the heap.
 pub fn heap_demo() {
-    // let mut term = terminal().lock(); // NOTE: change allocator back to bumpallocator in global.rs
+    // NOTE: change allocator back to bumpallocator in global.rs
+    // println!("Heap Demo:");
+    // println!("");
 
-    // writeln!(term, "Heap Demo:").unwrap();
-    // writeln!(term).unwrap();
-
-    // crate::allocator::global::dump_free_list(&mut term);
-    // writeln!(term).unwrap();
+    // crate::allocator::global::dump_free_list();
+    // println!("");
 
     // let boxed = Box::new(0xdeadbeefu32);
-    // writeln!(term, "Allocated Box at {:p} containing {:#x}", &*boxed, *boxed).unwrap();
+    // println!("Allocated Box at {:p} containing {:#x}", &*boxed, *boxed);
 
     // let mut v: Vec<u8> = Vec::new();
     // for i in 0u8..100u8 {
     //     v.push(i);
-    //     // crate::allocator::global::dump_free_list(&mut term);
+    //     // crate::allocator::global::dump_free_list();
     // }
-    // writeln!(term, "Allocated Vec at {:p} len={} cap={}", v.as_ptr(), v.len(), v.capacity()).unwrap();
-    // writeln!(term).unwrap();
+    // println!("Allocated Vec at {:p} len={} cap={}", v.as_ptr(), v.len(), v.capacity());
+    // println!("");
 
-    // crate::allocator::global::dump_free_list(&mut term);
-    // writeln!(term, "Heap Demo End").unwrap();
-    // writeln!(term).unwrap();
-    let mut term = terminal().lock();
+    // crate::allocator::global::dump_free_list();
+    // println!("Heap Demo End");
+    // println!("");
+    println!("Heap Demo:");
+    println!("");
 
-    writeln!(term, "Heap Demo:").unwrap();
-    writeln!(term).unwrap();
+    println!("Linked list allocator:");
+    println!(
+        "  Heap start: 0x{:x}, Heap end: 0x{:x}",
+        crate::consts::heap_start(),
+        crate::consts::heap_start() + crate::consts::HEAP_SIZE
+    );
 
-    writeln!(term, "Linked list allocator:").unwrap();
-    writeln!(term, "  Heap start: 0x{:x}, Heap end: 0x{:x}", crate::consts::heap_start(), crate::consts::heap_start() + crate::consts::HEAP_SIZE).unwrap();
-    crate::allocator::global::dump_free_list(&mut term);
-    writeln!(term).unwrap();
+    crate::allocator::global::dump_free_list();
+    println!("");
 
-    writeln!(term, "Demo 1/4: Allocate structs using 'Box'").unwrap();
-    writeln!(term).unwrap();
+    println!("Demo 1/4: Allocate structs using 'Box'");
+    println!("");
 
     let s1 = Box::new(MyStruct { a: 1, b: 2 });
     let s2 = Box::new(MyStruct { a: 3, b: 4 });
     let s1_ptr = (&*s1) as *const MyStruct as usize;
     let s2_ptr = (&*s2) as *const MyStruct as usize;
-    writeln!(term, "s1 = {{ a: {}, b: {} }}", s1.a, s1.b).unwrap();
-    writeln!(term, "s2 = {{ a: {}, b: {} }}", s2.a, s2.b).unwrap();
-    writeln!(term, "s1 ptr: {:#x}, s2 ptr: {:#x}, sizeof(MyStruct)={}B", s1_ptr, s2_ptr, size_of::<MyStruct>()).unwrap();
-    writeln!(term).unwrap();
+    println!("s1 = {{ a: {}, b: {} }}", s1.a, s1.b);
+    println!("s2 = {{ a: {}, b: {} }}", s2.a, s2.b);
+    println!(
+        "s1 ptr: {:#x}, s2 ptr: {:#x}, sizeof(MyStruct)={}B",
+        s1_ptr,
+        s2_ptr,
+        size_of::<MyStruct>()
+    );
+    println!("");
 
-    writeln!(term, "Linked list allocator:").unwrap();
-    writeln!(term, "  Heap start: 0x{:x}, Heap end: 0x{:x}", crate::consts::heap_start(), crate::consts::heap_start() + crate::consts::HEAP_SIZE).unwrap();
-    crate::allocator::global::dump_free_list(&mut term);
-    writeln!(term).unwrap();
-    writeln!(term, "Press Enter to continue...").unwrap();
-    drop(term);
+    println!("Linked list allocator:");
+    println!(
+        "  Heap start: 0x{:x}, Heap end: 0x{:x}",
+        crate::consts::heap_start(),
+        crate::consts::heap_start() + crate::consts::HEAP_SIZE
+    );
+    crate::allocator::global::dump_free_list();
+    println!("");
+    println!("Press Enter to continue...");
     wait_for_enter();
 
-    let mut term = terminal().lock();
-    writeln!(term, "Demo 2/4: Free allocated structs").unwrap();
-    writeln!(term, "---------------------------------------").unwrap();
-    writeln!(term).unwrap();
+    println!("Demo 2/4: Free allocated structs");
+    println!("---------------------------------------");
+    println!("");
 
     drop(s1);
     drop(s2);
-    writeln!(term, "Dropped s1 and s2").unwrap();
-    writeln!(term).unwrap();
+    println!("Dropped s1 and s2");
+    println!("");
 
-    writeln!(term, "Linked list allocator:").unwrap();
-    crate::allocator::global::dump_free_list(&mut term);
-    writeln!(term).unwrap();
-    writeln!(term, "Press Enter to continue...").unwrap();
-    drop(term);
+    println!("Linked list allocator:");
+    crate::allocator::global::dump_free_list();
+    println!("");
+    println!("Press Enter to continue...");
     wait_for_enter();
 
-    let mut term = terminal().lock();
-    writeln!(term, "Demo 3/4: Allocate a Vec of three structs").unwrap();
-    writeln!(term, "---------------------------------------").unwrap();
-    writeln!(term).unwrap();
+    println!("Demo 3/4: Allocate a Vec of three structs");
+    println!("---------------------------------------");
+    println!("");
 
     let mut vec: Vec<MyStruct> = Vec::with_capacity(4);
     vec.push(MyStruct { a: 5, b: 6 });
     vec.push(MyStruct { a: 7, b: 8 });
     vec.push(MyStruct { a: 9, b: 0 });
 
-    writeln!(term, "Vec capacity: {} elements ({} bytes)", vec.capacity(), vec.capacity() * size_of::<MyStruct>()).unwrap();
-    writeln!(term, "Vec data ptr: {:#x}", vec.as_ptr() as usize).unwrap();
+    println!(
+        "Vec capacity: {} elements ({} bytes)",
+        vec.capacity(),
+        vec.capacity() * size_of::<MyStruct>()
+    );
+    println!("Vec data ptr: {:#x}", vec.as_ptr() as usize);
 
-    writeln!(term, "vec[0] = {{ a: {}, b: {} }}", vec[0].a, vec[0].b).unwrap();
-    writeln!(term, "vec[1] = {{ a: {}, b: {} }}", vec[1].a, vec[1].b).unwrap();
-    writeln!(term, "vec[2] = {{ a: {}, b: {} }}", vec[2].a, vec[2].b).unwrap();
-    writeln!(term).unwrap();
+    println!("vec[0] = {{ a: {}, b: {} }}", vec[0].a, vec[0].b);
+    println!("vec[1] = {{ a: {}, b: {} }}", vec[1].a, vec[1].b);
+    println!("vec[2] = {{ a: {}, b: {} }}", vec[2].a, vec[2].b);
+    println!("");
 
-    writeln!(term, "Linked list allocator:").unwrap();
-    crate::allocator::global::dump_free_list(&mut term);
-    writeln!(term).unwrap();
-    writeln!(term, "Press Enter to continue...").unwrap();
-    drop(term);
+    println!("Linked list allocator:");
+    crate::allocator::global::dump_free_list();
+    println!("");
+    println!("Press Enter to continue...");
     wait_for_enter();
 
-    let mut term = terminal().lock();
-    writeln!(term, "Demo 4/4: Free allocated Vec").unwrap();
-    writeln!(term, "---------------------------------------").unwrap();
-    writeln!(term).unwrap();
+    println!("Demo 4/4: Free allocated Vec");
+    println!("---------------------------------------");
+    println!("");
 
     drop(vec);
-    writeln!(term, "Dropped Vec").unwrap();
-    writeln!(term).unwrap();
+    println!("Dropped Vec");
+    println!("");
 
-    writeln!(term, "Linked list allocator:").unwrap();
-    crate::allocator::global::dump_free_list(&mut term);
-    writeln!(term).unwrap();
-    writeln!(term, "Press Enter to continue...").unwrap();
-    drop(term);
+    println!("Linked list allocator:");
+        crate::allocator::global::dump_free_list();
+    println!("");
+    println!("Press Enter to continue...");
     wait_for_enter();
 }
 

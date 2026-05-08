@@ -126,11 +126,11 @@ impl LinkedListAllocator {
     }
 
     /// Dump the free list for debugging purposes.
-    pub fn dump_free_list(&mut self, writer: &mut dyn Write) {
-        writeln!(writer, "Free blocks:").ok();
+    pub fn dump_free_list(&mut self) {
+        println!("Free blocks:");
         let mut current = self.head.next.as_ref();
         while let Some(node) = current {
-            writeln!(writer, "  block: start={:#x}, size={:#x}, end={:#x}", node.start_addr(), node.size, node.end_addr()).ok();
+            println!("  block: start={:#x}, size={:#x}, end={:#x}", node.start_addr(), node.size, node.end_addr());
             current = node.next.as_ref();
         }
     }
