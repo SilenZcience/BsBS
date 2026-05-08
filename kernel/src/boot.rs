@@ -18,7 +18,6 @@
 #![allow(unused_variables)]
 
 use log::{debug, error, info};
-use core::fmt::Write;
 use uefi::mem::memory_map::MemoryMapOwned;
 use crate::device::framebuffer::Framebuffer;
 use crate::device::serial::COM1;
@@ -30,7 +29,13 @@ mod device;
 mod library;
 mod logger;
 mod multiboot;
+mod consts;
 mod demo;
+mod allocator;
+
+extern crate alloc;
+
+use crate::consts::{heap_start, HEAP_SIZE};
 
 unsafe extern "C" {
     fn load_gdt();
@@ -82,8 +87,12 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }
 
+    crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
+
     crate::demo::lesson1::keyboard_demo();
     crate::demo::lesson1::text_demo();
+    // Run heap demo to test allocator
+    crate::demo::lesson2::heap_demo();
 
     info!("Hello from the kernel!");
     info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);

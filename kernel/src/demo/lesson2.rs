@@ -15,10 +15,27 @@ use crate::device::speaker;
 use crate::device::speaker::SPEAKER;
 use crate::device::terminal::terminal;
 
+use log::info;
+
 /// A simple heap demo, allocating and freeing memory on the heap.
 /// The allocator state is dumped before and after each operation.
 pub fn heap_demo() {
-    todo!("lesson2::heap_demo() is not implemented yet.")
+    info!("--- heap demo start ---");
+
+    crate::allocator::global::dump_free_list();
+
+    let boxed = Box::new(0xdeadbeefu32);
+    info!("Allocated Box at {:p} containing {:#x}", &*boxed, *boxed);
+
+    let mut v: Vec<u8> = Vec::new();
+    for i in 0u8..100u8 {
+        v.push(i);
+        // crate::allocator::global::dump_free_list();
+    }
+    info!("Allocated Vec at {:p} len={} cap={}", v.as_ptr(), v.len(), v.capacity());
+
+    crate::allocator::global::dump_free_list();
+    info!("--- heap demo end ---");
 }
 
 /// A demo that plays songs via the PC speaker.
