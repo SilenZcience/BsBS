@@ -76,6 +76,28 @@ enum SpeakerRegister {
 /// Base frequency of the PIT (Programmable Interval Timer) in Hz.
 const PIT_FREQUENCY: usize = 1193180;
 
+// Bits         Usage
+// 7 and 6      Select channel :
+//                 0 0 = Channel 0
+//                 0 1 = Channel 1
+//                 1 0 = Channel 2
+//                 1 1 = Read-back command (8254 only)
+// 5 and 4      Access mode :
+//                 0 0 = Latch count value command
+//                 0 1 = Access mode: lobyte only
+//                 1 0 = Access mode: hibyte only
+//                 1 1 = Access mode: lobyte/hibyte
+// 3 to 1       Operating mode :
+//                 0 0 0 = Mode 0 (interrupt on terminal count)
+//                 0 0 1 = Mode 1 (hardware re-triggerable one-shot)
+//                 0 1 0 = Mode 2 (rate generator)
+//                 0 1 1 = Mode 3 (square wave generator)
+//                 1 0 0 = Mode 4 (software triggered strobe)
+//                 1 0 1 = Mode 5 (hardware triggered strobe)
+//                 1 1 0 = Mode 2 (rate generator, same as 010b)
+//                 1 1 1 = Mode 3 (square wave generator, same as 011b)
+// 0            BCD/Binary mode: 0 = 16-bit binary, 1 = four-digit BCD
+
 impl Speaker {
     /// Create a new Speaker instance.
     pub const fn new() -> Self {
@@ -89,24 +111,49 @@ impl Speaker {
 
     /// Play a specific frequency for a given amount of time (milliseconds).
     pub fn play(&mut self, frequency: usize, duration: usize) {
-        todo!("Speaker::play() is not implemented yet.")
+        let counter = PIT_FREQUENCY / frequency;
+
+        // Configure PIT counter 2 for mode 3 (square wave generator)
+        // Control byte: 10 (counter 2), 11 (load LSB then MSB), 011 (mode 3), 0 (binary)
+        // = 1011_0110 = 0xB6
+        unsafe { self.pit_ctrl_port.outb(0xB6u8); }
+
+        // Load the reload value (LSB then MSB)
+        unsafe { self.pit_data2_port.outb((counter & 0xFF) as u8); } // Load channel 2 (low byte)
+        unsafe { self.pit_data2_port.outb((counter >> 8)   as u8); } // Load channel 2 (high byte)
+
+        self.on();
+        self.delay(duration);
+        // self.off();
     }
 
     /// Turn on the speaker.
     /// The played tone is dependent on counter 2 of the PIT.
     pub fn on(&mut self) {
-        todo!("Speaker::on() is not implemented yet.")
+        let ppi_value = unsafe { self.ppi_port.inb() };
+        // Set bits 0 and 1 to enable speaker
+        unsafe { self.ppi_port.outb(ppi_value | 0x03u8); } // 0x03 == 0b00000011
     }
 
     /// Turn off the speaker.
     pub fn off(&mut self) {
-        todo!("Speaker::off() is not implemented yet.")
+        let ppi_value = unsafe { self.ppi_port.inb() };
+        // Clear bits 0 and 1 to disable speaker
+        unsafe { self.ppi_port.outb(ppi_value & 0xFCu8); } // 0xFC == 0b11111100
     }
 
     /// Return the current value of the PIT counter (16-bit).
     /// Used by `delay()` to check if the counter has reached 0 or has been reloaded.
     fn read_counter(&mut self) -> u16 {
-        todo!("Speaker::read_counter() is not implemented yet.")
+        // Latch counter 0 (prevents the value from changing while we read it)
+        // Command: 00 (channel 0), 00 (latch command), 000 (don't care mode), 0 (binary)
+        // = 0000_0000 = 0x00
+        unsafe { self.pit_ctrl_port.outb(0x00u8); }
+
+        let low  = unsafe { self.pit_data0_port.inb() }; // Read channel 0 (low byte)
+        let high = unsafe { self.pit_data0_port.inb() }; // Read channel 0 (high byte)
+
+        ((high as u16) << 8) | (low as u16)
     }
 
     /// Wait for a given amount of time in milliseconds using counter 0 of the PIT.
@@ -114,7 +161,30 @@ impl Speaker {
     /// This means that the counter will count down from 1193 to 0 and then reload itself.
     /// Counting from 1193 to 0 takes 1ms.
     fn delay(&mut self, duration: usize) {
-        todo!("Speaker::delay() is not implemented yet.")
+        const PIT_RELOAD_1MS: usize = PIT_FREQUENCY / 1000;
+
+        // Configure PIT counter 0 for mode 2 (rate generator)
+        // Control byte: 00 (counter 0), 11 (load LSB then MSB), 010 (mode 2), 0 (binary)
+        // = 0011_0100 = 0x34
+        unsafe { self.pit_ctrl_port.outb(0x34u8); }
+
+        unsafe { self.pit_data0_port.outb((PIT_RELOAD_1MS & 0xFF) as u8); } // Load channel 0 (low byte)
+        unsafe { self.pit_data0_port.outb((PIT_RELOAD_1MS >> 8)   as u8); } // Load channel 0 (high byte)
+
+        // Wait for the counter to reach 0 and reload 'duration' times
+        let mut ms_count = 0;
+        let mut last_counter = self.read_counter();
+
+        while ms_count < duration {
+            let counter = self.read_counter();
+
+            // counter wrapped around -> passed another 1ms
+            if counter > last_counter {
+                ms_count += 1;
+            }
+
+            last_counter = counter;
+        }
     }
 }
 

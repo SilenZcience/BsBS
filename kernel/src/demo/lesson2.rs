@@ -157,5 +157,10 @@ fn wait_for_enter() {
 
 /// A demo that plays songs via the PC speaker.
 pub fn speaker_demo() {
-    todo!("lesson2::speaker_demo() is not implemented yet.")
+
+    println!("Speaker Demo: Playing Tetris theme...");
+
+    speaker::tetris();
+
+    println!("Finished!");
 }
