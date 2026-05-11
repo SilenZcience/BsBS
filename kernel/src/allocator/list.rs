@@ -69,20 +69,62 @@ impl LinkedListAllocator {
         }
     }
 
-    /// Adds the given free memory block 'addr' to the front of the free list.
+    /// Adds the given free memory block 'addr' to the free list.
     unsafe fn add_free_block(&mut self, addr: usize, size: usize) {
+        let mut current = &mut self.head;
+
+        // find position to insert
+        while let Some(next) = current.next.as_ref() {
+            if next.start_addr() >= addr {
+                break;
+            }
+
+            current = current.next.as_mut().unwrap();
+        }
+
+        let end_addr = addr
+            .checked_add(size)
+            .expect("free block end address overflowed");
+
+        // check which adjacent blocks can be merged
+        let prev_adjacent = current.end_addr() == addr;
+        let next_adjacent = current
+            .next
+            .as_ref()
+            .map_or(false, |next| end_addr == next.start_addr());
+
+        // merge prev
+        if prev_adjacent {
+            current.size += size;
+
+            // also merge next
+            if next_adjacent {
+                let next_node = current.next.take().unwrap();
+                current.size += next_node.size;
+                current.next = next_node.next.take();
+            }
+
+            return;
+        }
+
         let new_node = addr as *mut ListNode;
 
         unsafe {
-            // head, new_node --> head.next
             *new_node = ListNode {
                 size,
-                next: self.head.next.take(),
+                next: current.next.take(),
             };
         }
 
-        // head --> new_node --> head.next
-        self.head.next = Some(unsafe { &mut *new_node });
+        current.next = Some(unsafe { &mut *new_node });
+
+        // merge next
+        if next_adjacent {
+            let inserted = current.next.as_mut().unwrap();
+            let next_node = inserted.next.take().unwrap();
+            inserted.size += next_node.size;
+            inserted.next = next_node.next.take();
+        }
     }
 
     /// Search a free block with the given size and alignment and remove it from the list.

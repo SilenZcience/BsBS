@@ -50,7 +50,7 @@ pub fn heap_demo() {
     crate::allocator::global::dump_free_list();
     println!("");
 
-    println!("Demo 1/4: Allocate structs using 'Box'");
+    println!("Demo 1/5: Allocate structs using 'Box'");
     println!("");
 
     let s1 = Box::new(MyStruct { a: 1, b: 2 });
@@ -78,7 +78,7 @@ pub fn heap_demo() {
     println!("Press Enter to continue...");
     wait_for_enter();
 
-    println!("Demo 2/4: Free allocated structs");
+    println!("Demo 2/5: Free allocated structs");
     println!("---------------------------------------");
     println!("");
 
@@ -93,7 +93,7 @@ pub fn heap_demo() {
     println!("Press Enter to continue...");
     wait_for_enter();
 
-    println!("Demo 3/4: Allocate a Vec of three structs");
+    println!("Demo 3/5: Allocate a Vec of three structs");
     println!("---------------------------------------");
     println!("");
 
@@ -120,7 +120,7 @@ pub fn heap_demo() {
     println!("Press Enter to continue...");
     wait_for_enter();
 
-    println!("Demo 4/4: Free allocated Vec");
+    println!("Demo 4/5: Free allocated Vec");
     println!("---------------------------------------");
     println!("");
 
@@ -129,10 +129,97 @@ pub fn heap_demo() {
     println!("");
 
     println!("Linked list allocator:");
-        crate::allocator::global::dump_free_list();
+    crate::allocator::global::dump_free_list();
     println!("");
     println!("Press Enter to continue...");
     wait_for_enter();
+
+    println!("Demo 5/5: Allocate a bunch of objects");
+    println!("---------------------------------------");
+    println!("");
+
+    let mut pool: Vec<Option<Vec<MyStruct>>> = Vec::new();
+
+    for i in 0..201 {
+        let mut v: Vec<MyStruct> = Vec::with_capacity((i % 10) + 1);
+
+        for j in 0..v.capacity() {
+            v.push(MyStruct {
+                a: i as usize,
+                b: j as usize,
+            });
+        }
+
+        pool.push(Some(v));
+
+        if i % 50 == 0 {
+            println!("Allocated Vecs: {}", i);
+        }
+    }
+
+    println!("Initial allocations done");
+    println!("");
+
+    println!("Linked list allocator:");
+    crate::allocator::global::dump_free_list();
+    println!("");
+
+    println!("Press Enter to continue...");
+    wait_for_enter();
+
+    for i in 0..pool.len() {
+        if i % 3 == 0 {
+            pool[i] = None; // drop Vec
+        }
+    }
+
+    println!("Partially freed Vecs");
+    println!("");
+
+    println!("Linked list allocator:");
+    crate::allocator::global::dump_free_list();
+    println!("");
+
+    println!("Press Enter to continue...");
+    wait_for_enter();
+
+    for i in 0..150 {
+        let mut v: Vec<MyStruct> = Vec::with_capacity((i % 7) + 2);
+
+        for j in 0..v.capacity() {
+            v.push(MyStruct {
+                a: (i * 10) as usize,
+                b: j as usize,
+            });
+        }
+
+        pool.push(Some(v));
+
+        if i % 50 == 0 {
+            println!("Re-allocated Vecs: {}", i);
+        }
+    }
+
+    println!("Linked list allocator:");
+    crate::allocator::global::dump_free_list();
+    println!("");
+
+    println!("Press Enter to continue...");
+    wait_for_enter();
+
+    // final cleanup
+    for slot in pool {
+        drop(slot);
+    }
+
+    println!("Final state:");
+    println!("Linked list allocator:");
+    crate::allocator::global::dump_free_list();
+    println!("");
+
+    println!("Press Enter to continue...");
+    wait_for_enter();
+
 }
 
 /// A simple struct for testing heap allocations
