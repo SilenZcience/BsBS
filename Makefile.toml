@@ -46,6 +46,35 @@ args = [
     "-object", "filter-dump,id=filter1,netdev=rtl8139,file=rtl8139.dump",
 ]
 
+[tasks.qemu-wsl]
+command = "qemu-system-x86_64.exe"
+env = { WSL_BIOS_PATH = { script = ["wslpath -w 'RELEASEX64_OVMF.fd'"]}, WSL_IMAGE = { script = ["wslpath -w 'HeineOS.img'"] }, WSL_HDD_PATH = { script = ["wslpath -w 'hdd.img'"]} }
+dependencies = [ "image", "ovmf" ]
+args = [
+    # Base machine configuration
+    "-machine", "q35,pcspk-audiodev=audio0",
+    "-m", "512M",
+    "-bios", "${WSL_BIOS_PATH}",
+    "-boot", "d",
+    "-vga", "std",
+    "-rtc", "base=localtime",
+    "-serial", "stdio",
+
+    # Hard disk drive configuration
+    "-drive", "driver=raw,if=none,id=boot,file.filename=${WSL_IMAGE}",
+    "-device", "ide-hd,drive=boot",
+
+    # Audio configuration (Using sdl for Windows)
+    "-audiodev", "id=audio0,driver=sdl",
+
+    # Network configuration
+    "-nic", "model=rtl8139,id=rtl8139,hostfwd=udp::1797-:1797,hostfwd=tcp::1797-:1797",
+    "-object", "filter-dump,id=filter1,netdev=rtl8139,file=rtl8139.dump",
+
+    # Windows Hyper-V acceleration
+    "-accel", "whpx",
+]
+
 # Run HeineOS in QEMU with debugging enabled.
 # This task starts QEMU in a paused state and listens for a GDB connection on port 1234.
 [tasks.debug]

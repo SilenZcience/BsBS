@@ -16,7 +16,7 @@
             "type": "shell",
             "isBackground": false,
             "command": "cargo",
-            "args": [ "make", "--no-workspace", "iso" ],
+            "args": [ "make", "--no-workspace", "image" ],
             "problemMatcher": []
         },
         {
@@ -25,6 +25,15 @@
             "isBackground": false,
             "command": "cargo",
             "args": [ "make", "--no-workspace", "qemu" ],
+            "problemMatcher": [],
+            "dependsOn": "build"
+        },
+        {
+            "label": "qemu-wsl",
+            "type": "shell",
+            "isBackground": false,
+            "command": "cargo",
+            "args": [ "make", "--no-workspace", "qemu-wsl" ],
             "problemMatcher": [],
             "dependsOn": "build"
         },
