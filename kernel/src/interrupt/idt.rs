@@ -86,7 +86,15 @@ impl IdtEntry {
     /// The selector is the first entry in the GDT after the null descriptor (kernel code segment) -> 1 * 8 = 8.
     /// The options are always 'Present', 'DPL=0' and '64-bit interrupt gate'.
     const fn new(offset: u64) -> IdtEntry {
-        todo!("IdtEntry::new() not implemented yet.");
+        IdtEntry {
+            offset_low: offset as u16,          // offset bits 0..15
+            selector: 8,                        // a code segment selector in GDT or LDT
+            // gate type: 0b1110 for 64-bit interrupt gate == 0xE, DPL: 0b00 == 0, and Present bit: 1 -> 0b10001110 == 0x8E
+            options: 0x8E00u16,                 // gate type, dpl, and p fields
+            offset_mid: (offset >> 16) as u16,  // offset bits 16..31
+            offset_high: (offset >> 32) as u32, // offset bits 32..63
+            reserved: 0,                        // reserved
+        }
     }
 
     /// Create a new IDT entry for an interrupt handler function.

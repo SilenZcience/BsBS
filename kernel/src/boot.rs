@@ -88,6 +88,9 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }
 
+    crate::interrupt::idt::idt().load();
+    unsafe { core::arch::asm!("int 100"); }
+
     crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
 
     crate::demo::lesson1::keyboard_demo();
