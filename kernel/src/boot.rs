@@ -26,6 +26,7 @@ use crate::logger::Logger;
 
 #[macro_use]
 mod device;
+mod interrupt;
 mod library;
 mod logger;
 mod multiboot;
