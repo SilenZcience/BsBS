@@ -36,6 +36,7 @@ enum PicCommand {
     Initialize = 0x11,
 }
 
+#[derive(Copy, Clone)]
 #[repr(u8)]
 /// Enumeration of all IRQs (Interrupt Request Lines).
 pub enum Irq {
@@ -117,16 +118,52 @@ impl Pic {
 
     /// Enable an IRQ to be forwarded to the processor by the PIC.
     pub fn allow (&mut self, irq: Irq) {
-        todo!("Pic::allow() not implemented yet.");
+        // IRQ_clear_mask
+        let mut irqline = irq as u8;
+        unsafe {
+            let port: &mut IoPort;
+            if irqline < 8 {
+                port = &mut self.data1;
+            } else {
+                port = &mut self.data2;
+                irqline -= 8;
+            }
+            let value = port.inb() & !(1 << irqline);
+            port.outb(value);
+        }
     }
 
     /// Disable an IRQ to be forwarded to the processor by the PIC.
     pub fn forbid (&mut self, irq: Irq) {
-        todo!("Pic::forbid() not implemented yet.");
+        // IRQ_set_mask
+        let mut irqline = irq as u8;
+        unsafe {
+            let port: &mut IoPort;
+            if irqline < 8 {
+                port = &mut self.data1;
+            } else {
+                port = &mut self.data2;
+                irqline -= 8;
+            }
+            let value = port.inb() | (1 << irqline);
+            port.outb(value);
+        }
     }
 
     /// Get the state (enabled/disabled) of an IRQ in the PIC.
     pub fn status (&mut self, irq: Irq) -> bool {
-        todo!("Pic::status() not implemented yet.");
+        let mut irqline = irq as u8;
+        unsafe {
+            let port: &mut IoPort;
+            if irqline < 8 {
+                port = &mut self.data1;
+            } else {
+                port = &mut self.data2;
+                irqline -= 8;
+            }
+            let mask = port.inb();
+            // 0 enabled, 1 disabled
+            (mask & (1 << irqline)) == 0
+        }
     }
 }

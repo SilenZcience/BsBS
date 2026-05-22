@@ -437,5 +437,7 @@ impl ISR for KeyboardISR {
 /// Register the keyboard interrupt handler with the interrupt dispatcher
 /// and enable keyboard interrupts at the PIC.
 pub fn plugin() {
-    todo!("Keyboard::plugin() not implemented yet!");
+    use crate::device::pic::{PIC, Irq};
+
+    PIC.lock().allow(Irq::Keyboard);
 }
