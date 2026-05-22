@@ -9,7 +9,6 @@
 use alloc::alloc::{GlobalAlloc, Layout};
 use crate::allocator::global::{align_up, Locked};
 use core::ptr::null_mut;
-use core::fmt::Write;
 use log::info;
 
 /// A simple bump allocator that allocates memory in a linear fashion.

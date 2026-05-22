@@ -12,7 +12,6 @@ use core::mem::size_of;
 use crate::device::keyboard::KEYBOARD;
 use crate::device::key::Scancode;
 use crate::device::speaker;
-use crate::device::speaker::SPEAKER;
 
 /// A simple heap demo, allocating and freeing memory on the heap.
 pub fn heap_demo() {

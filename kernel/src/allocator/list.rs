@@ -11,7 +11,6 @@ use log::info;
 use crate::allocator::global::{align_up, Locked};
 use core::mem::{size_of, align_of};
 use core::ptr::null_mut;
-use core::fmt::Write;
 
 /// Header of a free block in the list allocator.
 struct ListNode {
