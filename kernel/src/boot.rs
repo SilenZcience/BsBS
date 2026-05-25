@@ -18,6 +18,7 @@
 #![allow(unused_variables)]
 
 use log::{debug, error, info};
+use core::str::FromStr;
 use uefi::mem::memory_map::MemoryMapOwned;
 use crate::device::framebuffer::Framebuffer;
 use crate::device::serial::COM1;
@@ -57,7 +58,26 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     if log::set_logger(&LOGGER).is_err() {
         panic!("Failed to initialize logger");
     }
+
     log::set_max_level(log::LevelFilter::Debug);
+    let mut log_to_terminal = false;
+    if let Some(cmdline) = multiboot.find_tag::<multiboot::CommandLineTag>(multiboot::TagType::CommandLine) {
+        let command_line = cmdline.as_str();
+        for argument in command_line.split_whitespace() {
+            if let Some(level) = argument.strip_prefix("log_level=") {
+                if let Ok(parsed_level) = log::LevelFilter::from_str(level) {
+                    log::set_max_level(parsed_level);
+                }
+            } else if let Some(enabled) = argument.strip_prefix("log_to_terminal=") {
+                if let Ok(parsed_enabled) = bool::from_str(enabled) {
+                    log_to_terminal = parsed_enabled;
+                }
+            }
+        }
+
+        info!("Command line: '{}'", command_line);
+        LOGGER.enable_terminal_logging(log_to_terminal);
+    }
 
     // Check if the bootloader passed the correct multiboot magic number.
     // If not, panic immediately as we cannot rely on the multiboot information.

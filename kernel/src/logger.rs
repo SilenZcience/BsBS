@@ -7,16 +7,26 @@
  */
 
 use core::fmt::Write;
+use core::sync::atomic::{AtomicBool, Ordering};
 use log::{Metadata, Record};
 use crate::device::serial;
 
 /// A simple logger implementing the `log::Log` trait, writing to the serial port (COM1).
-pub struct Logger {}
+pub struct Logger {
+    terminal_logging: AtomicBool,
+}
 
 impl Logger {
     /// Create a new logger.
     pub const fn new() -> Logger {
-        Logger {}
+        Logger {
+            terminal_logging: AtomicBool::new(false),
+        }
+    }
+
+    /// Enable or disable terminal logging.
+    pub fn enable_terminal_logging(&self, enabled: bool) {
+        self.terminal_logging.store(enabled, Ordering::Relaxed);
     }
 }
 
@@ -36,16 +46,33 @@ impl log::Log for Logger {
         let file = record.file().unwrap_or("?");
         let line = record.line().map_or(0, |l| l);
 
-        let mut com1 = serial::COM1.lock();
-        let _ = com1.write_fmt(format_args!(
-            "[{time}] [{level}] [{file}:{line}] ",
-            time = time,
-            level = level,
-            file = file,
-            line = line
-        ));
-        let _ = com1.write_fmt(*record.args());
-        let _ = com1.write_str("\n");
+        if let Some(mut com1) = serial::COM1.try_lock() {
+            let _ = write!(
+                &mut com1,
+                "[{time}] [{level}] [{file}:{line}] ",
+                time = time,
+                level = level,
+                file = file,
+                line = line
+            );
+            let _ = com1.write_fmt(*record.args());
+            let _ = com1.write_str("\n");
+        }
+
+        if self.terminal_logging.load(Ordering::Relaxed) {
+            if let Some(mut terminal) = crate::device::terminal::terminal().try_lock() {
+                let _ = write!(
+                    &mut terminal,
+                    "[{time}] [{level}] [{file}:{line}] ",
+                    time = time,
+                    level = level,
+                    file = file,
+                    line = line
+                );
+                let _ = terminal.write_fmt(*record.args());
+                let _ = terminal.write_str("\n");
+            }
+        }
     }
 
     /// Flush the logger.
