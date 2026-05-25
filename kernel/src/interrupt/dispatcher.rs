@@ -146,8 +146,7 @@ impl IntVectors {
         });
     }
 
-    /// Check if an ISR is registered for `vector`. If so, return a pointer to it.
-    /// The caller can invoke the ISR after releasing any locks.
+    /// Check if an ISR is registered for `vector`. If so, call it.
     pub fn report(&self, vector: u8) -> Option<*const dyn ISR> {
         self.map
             .get(vector as usize)

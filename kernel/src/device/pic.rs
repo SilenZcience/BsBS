@@ -120,14 +120,14 @@ impl Pic {
     pub fn allow (&mut self, irq: Irq) {
         // IRQ_clear_mask
         let mut irqline = irq as u8;
+        let port: &mut IoPort;
+        if irqline < 8 {
+            port = &mut self.data1;
+        } else {
+            port = &mut self.data2;
+            irqline -= 8;
+        }
         unsafe {
-            let port: &mut IoPort;
-            if irqline < 8 {
-                port = &mut self.data1;
-            } else {
-                port = &mut self.data2;
-                irqline -= 8;
-            }
             let value = port.inb() & !(1 << irqline);
             port.outb(value);
         }
@@ -137,14 +137,14 @@ impl Pic {
     pub fn forbid (&mut self, irq: Irq) {
         // IRQ_set_mask
         let mut irqline = irq as u8;
+        let port: &mut IoPort;
+        if irqline < 8 {
+            port = &mut self.data1;
+        } else {
+            port = &mut self.data2;
+            irqline -= 8;
+        }
         unsafe {
-            let port: &mut IoPort;
-            if irqline < 8 {
-                port = &mut self.data1;
-            } else {
-                port = &mut self.data2;
-                irqline -= 8;
-            }
             let value = port.inb() | (1 << irqline);
             port.outb(value);
         }
@@ -153,15 +153,15 @@ impl Pic {
     /// Get the state (enabled/disabled) of an IRQ in the PIC.
     pub fn status (&mut self, irq: Irq) -> bool {
         let mut irqline = irq as u8;
+        let port: &mut IoPort;
+        if irqline < 8 {
+            port = &mut self.data1;
+        } else {
+            port = &mut self.data2;
+            irqline -= 8;
+        }
         unsafe {
-            let port: &mut IoPort;
-            if irqline < 8 {
-                port = &mut self.data1;
-            } else {
-                port = &mut self.data2;
-                irqline -= 8;
-            }
-            let mask = port.inb();
+        let mask = port.inb();
             // 0 enabled, 1 disabled
             (mask & (1 << irqline)) == 0
         }

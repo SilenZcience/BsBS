@@ -160,31 +160,25 @@ impl Keyboard {
     /// If no byte is available or the key event is not complete yet, None is returned.
     fn try_read_next_byte(&mut self) -> Option<KeyEvent> {
         loop {
-            // Check if a byte is available from the keyboard (output buffer full)
+            // Check if a byte is available from the keyboard
             let status = unsafe { self.control_port.inb() };
             if (status & KeyboardStatus::OUTPUT_BUFFER_FULL.bits()) == 0 {
-                // No data available
                 return None;
             }
 
-            // Read the byte from the data port.
+            // Read the byte from the data port
             // Bytes from the PS/2 mouse are discarded here, because they also arrive via the controller.
             let code = unsafe { self.data_port.inb() };
             if (status & KeyboardStatus::AUXILIARY_DEVICE.bits()) != 0 {
                 continue;
             }
 
-            // Decode the byte; if a full event is ready, return a copy of the event.
+            // Decode the byte
             if self.decode_byte(code) {
-                // Return a copy of the gathered KeyEvent.
                 let event = self.gather;
-                // Reset gather for the next event.
                 self.gather = KeyEvent::new();
                 return Some(event);
             }
-
-            // The byte was consumed, but it did not complete a key event yet.
-            // Keep draining any remaining pending scancodes in this interrupt.
         }
     }
 
