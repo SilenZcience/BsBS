@@ -7,11 +7,14 @@
  */
 
 use bitflags::bitflags;
+use alloc::boxed::Box;
 use crate::device::cpu::IoPort;
 use crate::device::key::{KeyEvent, KeyModifiers, KeyEventQueue};
 use crate::library::spinlock::Spinlock;
 use crate::library::once::Once;
+use crate::interrupt::dispatcher::{IntVectors, InterruptVector};
 use crate::interrupt::isr::ISR;
+use log::debug;
 
 /// The global keyboard instance protected by a spinlock.
 /// This instance can be used to poll key events from the keyboard. Process the key event
@@ -430,7 +433,12 @@ impl ISR for KeyboardISR {
     /// Keyboard interrupt handler.
     /// This function reads the next byte from the keyboard and decodes it into a key event.
     fn trigger(&self) {
-        todo!("KeyboardISR::trigger() not implemented yet!");
+        debug!("Keyboard interrupt handler triggered");
+
+        let mut keyboard = KEYBOARD.lock();
+        if let Some(event) = keyboard.try_read_next_byte() {
+            keyboard_buffer().push_key_event(event);
+        }
     }
 }
 
@@ -439,5 +447,6 @@ impl ISR for KeyboardISR {
 pub fn plugin() {
     use crate::device::pic::{PIC, Irq};
 
+    IntVectors::register(InterruptVector::Keyboard, Box::new(KeyboardISR));
     PIC.lock().allow(Irq::Keyboard);
 }

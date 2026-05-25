@@ -14,6 +14,7 @@ use crate::interrupt::idt;
 use crate::interrupt::idt::InterruptStackFrame;
 use crate::interrupt::isr::ISR;
 use crate::library::spinlock::Spinlock;
+use log::debug;
 
 #[derive(Debug, Copy, Clone)]
 /// Enumeration of all standardized interrupt vectors.
@@ -81,9 +82,16 @@ pub unsafe fn unlock_int_vectors() {
 /// The main interrupt dispatcher.
 /// Every interrupt is routed here, if not specified otherwise in the IDT.
 pub fn dispatch_interrupt(vector: u8, stack_frame: InterruptStackFrame, error_code: Option<u64>) {
+    let _ = stack_frame;
+    debug!("Handling interrupt vector {}", vector);
+
     match error_code {
         Some(code) => println!("interrupt: {} error_code: {}", vector, code),
         None => println!("interrupt: {} error_code: None", vector),
+    }
+
+    if !INT_VECTORS.lock().report(vector) {
+        panic!("No ISR registered for interrupt vector {}", vector);
     }
 }
 
@@ -120,11 +128,23 @@ impl IntVectors {
     /// Register an ISR.
     /// Interrupts get disabled while registering the ISR to avoid race conditions with `dispatch_interrupt()`.
     pub fn register(vector: InterruptVector, isr: Box<dyn ISR>) {
-        todo!("IntVectors::register() not implemented yet!");
+        cpu::without_interrupts(|| {
+            let mut int_vectors = INT_VECTORS.lock();
+            if int_vectors.map.is_empty() {
+                panic!("ISR map is not initialized!");
+            }
+
+            int_vectors.map[vector as usize] = Some(isr);
+        });
     }
 
     /// Check if an ISR is registered for `vector`. If so, call it.
     pub fn report(&self, vector: u8) -> bool {
-        todo!("IntVectors::report() not implemented yet!");
+        if let Some(Some(isr)) = self.map.get(vector as usize) {
+            isr.trigger();
+            true
+        } else {
+            false
+        }
     }
 }

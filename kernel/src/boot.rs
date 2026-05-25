@@ -88,6 +88,12 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }
 
+    info!("Initializing heap allocator");
+    crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
+
+    info!("Initializing interrupt dispatcher");
+    crate::interrupt::dispatcher::init_interrupt_dispatcher();
+
     info!("Initializing IDT");
     crate::interrupt::idt::idt().load();
 
@@ -100,7 +106,7 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     info!("Enabling interrupts");
     crate::device::cpu::enable_int();
 
-    crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
+    info!("Boot sequence finished");
 
     crate::demo::lesson1::keyboard_demo();
     crate::demo::lesson1::text_demo();
