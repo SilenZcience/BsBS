@@ -83,14 +83,22 @@ pub unsafe fn unlock_int_vectors() {
 /// Every interrupt is routed here, if not specified otherwise in the IDT.
 pub fn dispatch_interrupt(vector: u8, stack_frame: InterruptStackFrame, error_code: Option<u64>) {
     let _ = stack_frame;
-    debug!("Handling interrupt vector {}", vector);
+    debug!("Handling interrupt vector {}", vector); // NOTE: race condition if print to screen
 
-    match error_code {
-        Some(code) => println!("interrupt: {} error_code: {}", vector, code),
-        None => println!("interrupt: {} error_code: None", vector),
-    }
+    // match error_code { // fuck this println
+    //     Some(code) => println!("interrupt: {} error_code: {}", vector, code),
+    //     None => println!("interrupt: {} error_code: None", vector),
+    // }
 
-    if !INT_VECTORS.lock().report(vector) {
+    let isr = {
+        INT_VECTORS.lock().report(vector)
+    };
+
+    if let Some(isr) = isr {
+        unsafe {
+            (&*isr).trigger();
+        }
+    } else {
         panic!("No ISR registered for interrupt vector {}", vector);
     }
 }
@@ -138,13 +146,12 @@ impl IntVectors {
         });
     }
 
-    /// Check if an ISR is registered for `vector`. If so, call it.
-    pub fn report(&self, vector: u8) -> bool {
-        if let Some(Some(isr)) = self.map.get(vector as usize) {
-            isr.trigger();
-            true
-        } else {
-            false
-        }
+    /// Check if an ISR is registered for `vector`. If so, return a pointer to it.
+    /// The caller can invoke the ISR after releasing any locks.
+    pub fn report(&self, vector: u8) -> Option<*const dyn ISR> {
+        self.map
+            .get(vector as usize)
+            .and_then(|isr| isr.as_deref())
+            .map(|isr| isr as *const dyn ISR)
     }
 }

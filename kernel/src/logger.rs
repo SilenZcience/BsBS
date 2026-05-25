@@ -36,7 +36,7 @@ impl log::Log for Logger {
         let file = record.file().unwrap_or("?");
         let line = record.line().map_or(0, |l| l);
 
-        let mut com1 = crate::device::serial::COM1.lock();
+        let mut com1 = serial::COM1.lock();
         let _ = com1.write_fmt(format_args!(
             "[{time}] [{level}] [{file}:{line}] ",
             time = time,

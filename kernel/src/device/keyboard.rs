@@ -18,7 +18,7 @@ use log::debug;
 
 /// The global keyboard instance protected by a spinlock.
 /// This instance can be used to poll key events from the keyboard. Process the key event
-pub static KEYBOARD: Spinlock<Keyboard> = Spinlock::new(Keyboard::new());
+static KEYBOARD: Spinlock<Keyboard> = Spinlock::new(Keyboard::new());
 
 /// Global key event buffer.
 /// Each key is pushed to this queue by the interrupt handler and can be retrieved at a later time by the user.
@@ -159,52 +159,32 @@ impl Keyboard {
     /// If a complete key event has been decoded, it is returned.
     /// If no byte is available or the key event is not complete yet, None is returned.
     fn try_read_next_byte(&mut self) -> Option<KeyEvent> {
-        // Check if a byte is available from the keyboard (output buffer full)
-        let status = unsafe { self.control_port.inb() };
-        if (status & KeyboardStatus::OUTPUT_BUFFER_FULL.bits()) == 0 {
-            // No data available
-            return None;
-        }
-
-        // Read the byte from the data port
-        let code = unsafe { self.data_port.inb() };
-
-        // Decode the byte; if a full event is ready, return a copy of the event
-        if self.decode_byte(code) {
-            // Return a copy of the gathered KeyEvent
-            let event = self.gather;
-            // Reset gather for the next event
-            self.gather = KeyEvent::new();
-            Some(event)
-        } else {
-            None
-        }
-    }
-
-    /// Poll the keyboard for the next key event (press or release).
-    /// This function blocks until a complete key event has been received and decoded.
-    ///
-    /// CAUTION: This function must not be used anymore, once the keyboard interrupt handler is active,
-    /// because it directly reads from the keyboard controller and thus interferes with the interrupt handler.
-    pub fn poll_key_event(&mut self) -> KeyEvent {
         loop {
-            if let Some(event) = self.try_read_next_byte() {
-                return event;
+            // Check if a byte is available from the keyboard (output buffer full)
+            let status = unsafe { self.control_port.inb() };
+            if (status & KeyboardStatus::OUTPUT_BUFFER_FULL.bits()) == 0 {
+                // No data available
+                return None;
             }
-        }
-    }
 
-    /// Poll the keyboard for the next key press event.
-    /// This function blocks until a key press event has been received and decoded,
-    /// discarding any key release events.
-    pub fn poll_key_press(&mut self) -> KeyEvent {
-        loop {
-            if let Some(event) = self.try_read_next_byte() {
-                if event.pressed() {
-                    return event;
-                }
-                // else: discard key release events
+            // Read the byte from the data port.
+            // Bytes from the PS/2 mouse are discarded here, because they also arrive via the controller.
+            let code = unsafe { self.data_port.inb() };
+            if (status & KeyboardStatus::AUXILIARY_DEVICE.bits()) != 0 {
+                continue;
             }
+
+            // Decode the byte; if a full event is ready, return a copy of the event.
+            if self.decode_byte(code) {
+                // Return a copy of the gathered KeyEvent.
+                let event = self.gather;
+                // Reset gather for the next event.
+                self.gather = KeyEvent::new();
+                return Some(event);
+            }
+
+            // The byte was consumed, but it did not complete a key event yet.
+            // Keep draining any remaining pending scancodes in this interrupt.
         }
     }
 
@@ -436,7 +416,7 @@ impl ISR for KeyboardISR {
         debug!("Keyboard interrupt handler triggered");
 
         let mut keyboard = KEYBOARD.lock();
-        if let Some(event) = keyboard.try_read_next_byte() {
+        while let Some(event) = keyboard.try_read_next_byte() {
             keyboard_buffer().push_key_event(event);
         }
     }

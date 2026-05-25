@@ -9,7 +9,6 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::mem::size_of;
-use crate::device::keyboard::KEYBOARD;
 use crate::device::key::Scancode;
 use crate::device::speaker;
 
@@ -230,7 +229,7 @@ struct MyStruct {
 
 fn wait_for_enter() {
     loop {
-        let event = KEYBOARD.lock().poll_key_event();
+        let event = crate::device::keyboard::keyboard_buffer().poll_key_press();
         if event.pressed() {
             if let Some(sc) = event.scancode() {
                 if sc == Scancode::Enter {

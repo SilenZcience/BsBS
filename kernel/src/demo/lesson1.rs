@@ -17,10 +17,10 @@ pub fn text_demo() {
 
 /// A simple keyboard demo, displaying the events of key presses and releases.
 pub fn keyboard_demo() {
-    use crate::device::keyboard::KEYBOARD;
+    use crate::device::keyboard::keyboard_buffer;
     println!("Keyboard Demo: Press keys to see events. Press ESC to exit.");
     loop {
-        let event = KEYBOARD.lock().poll_key_event();
+        let event = keyboard_buffer().poll_key_event();
         let ascii = match event.ascii() {
             Some(c) => c,
             None => '\''
