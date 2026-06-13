@@ -5,7 +5,6 @@
  *         Fabian Ruhland, Heinrich Heine University Duesseldorf, 2026-01-07
  * License: GPLv3
  */
-use crate::device::font_8x8;
 use crate::multiboot;
 
 /// Represents a linear framebuffer for graphics output.
@@ -39,6 +38,9 @@ pub const BLUE: u32 = color(0, 0, 170);
 pub const MAGENTA: u32 = color(170, 0, 170);
 pub const CYAN: u32 = color(0, 170, 170);
 pub const WHITE: u32 = color(170, 170, 170);
+
+pub const CHAR_WIDTH: usize = 8;
+pub const CHAR_HEIGHT: usize = 16;
 
 impl Framebuffer {
     /// Create a new Framebuffer instance.
@@ -107,46 +109,41 @@ impl Framebuffer {
     }
 
     /// Get the pixel data for a character from the font data.
-    fn get_char_pixels(c: char) -> &'static [u8] {
-        let char_mem_size = (font_8x8::CHAR_WIDTH + (8 >> 1)) / 8 * font_8x8::CHAR_HEIGHT;
-        let start = char_mem_size * c as usize;
-        let end = start + char_mem_size;
+    // fn get_char_pixels(c: char) -> &'static [u8] {
+    //     let char_mem_size = (font_8x8::CHAR_WIDTH + (8 >> 1)) / 8 * font_8x8::CHAR_HEIGHT;
+    //     let start = char_mem_size * c as usize;
+    //     let end = start + char_mem_size;
 
-        &font_8x8::DATA[start..end]
-    }
+    //     &font_8x8::DATA[start..end]
+    // }
 
     /// Draw a single character at the specified (x, y) coordinates with the given foreground and background colors.
     /// If the character does not fit fully within the framebuffer, it is not drawn.
     pub fn draw_char(&mut self, c: char, x: usize, y: usize, fg_color: u32, bg_color: u32) {
-        let char_width  = font_8x8::CHAR_WIDTH;
-        let char_height = font_8x8::CHAR_HEIGHT;
-        if x + char_width > self.width || y + char_height > self.height {
+        if x + CHAR_WIDTH > self.width || y + CHAR_HEIGHT > self.height {
             return;
         }
 
-        let width_byte = (char_width + 7) / 8;
-        let char_pixels = Framebuffer::get_char_pixels(c);
-        let mut pixel_index = 0;
-
-        for y_offset in 0..char_height {
-            let mut x = x;
-            let y = y + y_offset;
-
-            for _ in 0..width_byte {
-                for bit in (0..8).rev() {
-                    if ((1 << bit) & char_pixels[pixel_index]) == 0 {
-                        // Safe because we already checked bounds above
-                        unsafe { self.draw_pixel_unchecked(x, y, bg_color); }
-                    } else {
-                        // Safe because we already checked bounds above
-                        unsafe { self.draw_pixel_unchecked(x, y, fg_color); }
-                    }
-
-                    x += 1;
-                }
+        if let Some(glyph) = unifont::get_glyph(c) {
+            if glyph.get_width() != CHAR_WIDTH {
+                return;
             }
 
-            pixel_index += 1;
+            for y_offset in 0..CHAR_HEIGHT {
+                for x_offset in 0..CHAR_WIDTH {
+                    if glyph.get_pixel(x_offset, y_offset) {
+                        unsafe { self.draw_pixel_unchecked(x + x_offset, y + y_offset, fg_color); }
+                    } else {
+                        unsafe { self.draw_pixel_unchecked(x + x_offset, y + y_offset, bg_color); }
+                    }
+                }
+            }
+        } else {
+            for y_offset in 0..CHAR_HEIGHT {
+                for x_offset in 0..CHAR_WIDTH {
+                    unsafe { self.draw_pixel_unchecked(x + x_offset, y + y_offset, bg_color); }
+                }
+            }
         }
     }
 
@@ -156,20 +153,19 @@ impl Framebuffer {
 
         for c in str.chars() {
             self.draw_char(c, x, y, fg_color, bg_color);
-            x += font_8x8::CHAR_WIDTH;
+            x += CHAR_WIDTH;
         }
     }
 
     /// Scroll the framebuffer content up by the specified number of lines.
     /// The freed space at the bottom is cleared to black.
     pub fn scroll_up(&mut self, lines: usize) {
-        if lines == 0 || lines >= self.height / font_8x8::CHAR_HEIGHT {
-            // If lines is 0 or more than the screen, just clear
+        if lines == 0 || lines >= self.height / CHAR_HEIGHT {
             self.clear();
             return;
         }
 
-        let char_height = font_8x8::CHAR_HEIGHT;
+        let char_height = CHAR_HEIGHT;
         let scroll_px = lines * char_height;
         let total_bytes = self.pitch * self.height;
         let move_bytes = (self.height - scroll_px) * self.pitch;
