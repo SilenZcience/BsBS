@@ -15,14 +15,37 @@ use crate::thread::thread::Thread;
 /// It starts three coroutines, each incrementing a counter and printing it to the terminal in an endless loop.
 /// The coroutines switch to the next coroutine after each print.
 pub fn coroutine_demo() {
-    todo!("lesson4::coroutine_demo() is not implemented yet.");
+    let mut c1 = Coroutine::new(coroutine_loop);
+    let mut c2 = Coroutine::new(coroutine_loop);
+    let mut c3 = Coroutine::new(coroutine_loop);
+    let mut c4 = Coroutine::new(coroutine_loop);
+    let mut c5 = Coroutine::new(coroutine_loop);
+
+    c1.set_next(&mut *c2);
+    c2.set_next(&mut *c3);
+    c3.set_next(&mut *c4);
+    c4.set_next(&mut *c5);
+    c5.set_next(&mut *c1);
+
+    c1.start();
 }
 
 /// The function executed by each coroutine in the coroutine demo.
 /// It increments a counter and prints it to the terminal in an endless loop,
 /// switching to the next coroutine after each print.
 fn coroutine_loop(coroutine: &mut Coroutine) {
-    todo!("lesson4::coroutine_loop() is not implemented yet.");
+    let mut counter = 0usize;
+    loop {
+        let mut term = terminal().lock();
+        term.set_pos(10, 10 + coroutine.id());
+        print_terminal!(&mut term, "Coroutine [{}]: {}", coroutine.id(), counter);
+        drop(term);
+        counter += 1;
+        for _ in 0..1000000 {
+            // fake sleep
+        }
+        coroutine.switch();
+    }
 }
 
 /// A demo function showcasing threads.

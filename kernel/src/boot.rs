@@ -27,8 +27,10 @@ use crate::logger::Logger;
 
 #[macro_use]
 mod device;
+mod coroutine;
 mod interrupt;
 mod library;
+mod thread;
 mod logger;
 mod multiboot;
 mod consts;
@@ -128,10 +130,11 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
 
     info!("Boot sequence finished");
 
-    crate::demo::lesson1::keyboard_demo();
-    crate::demo::lesson1::text_demo();
-    crate::demo::lesson2::heap_demo();
-    crate::demo::lesson2::speaker_demo();
+    // crate::demo::lesson1::keyboard_demo();
+    // crate::demo::lesson1::text_demo();
+    // crate::demo::lesson2::heap_demo();
+    // crate::demo::lesson2::speaker_demo();
+    crate::demo::lesson4::coroutine_demo();
 
     info!("Hello from the kernel!");
     info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);
