@@ -40,6 +40,7 @@ mod allocator;
 extern crate alloc;
 
 use crate::consts::{heap_start, HEAP_SIZE};
+use crate::thread::scheduler::scheduler;
 
 unsafe extern "C" {
     fn load_gdt();
@@ -113,6 +114,9 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     info!("Initializing heap allocator");
     crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
 
+    info!("Initializing scheduler");
+    scheduler();
+
     info!("Initializing interrupt dispatcher");
     crate::interrupt::dispatcher::init_interrupt_dispatcher();
 
@@ -134,7 +138,8 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // crate::demo::lesson1::text_demo();
     // crate::demo::lesson2::heap_demo();
     // crate::demo::lesson2::speaker_demo();
-    crate::demo::lesson4::coroutine_demo();
+    // crate::demo::lesson4::coroutine_demo();
+    crate::demo::lesson4::thread_demo();
 
     info!("Hello from the kernel!");
     info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);

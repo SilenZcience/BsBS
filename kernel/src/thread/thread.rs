@@ -27,6 +27,7 @@ pub fn next_id() -> usize {
 unsafe extern "C" fn thread_start(stack_ptr: usize) {
     naked_asm!(
         "mov rsp, rdi",
+        "call unlock_scheduler",
         "popfq",
         "pop rbp",
         "pop rdi",
@@ -71,6 +72,7 @@ unsafe extern "C" fn thread_switch(current_stack_ptr: *mut usize, next_stack: us
         "pushfq",
         "mov [rdi], rsp",
         "mov rsp, rsi",
+        "call unlock_scheduler",
         "popfq",
         "pop rbp",
         "pop rdi",
