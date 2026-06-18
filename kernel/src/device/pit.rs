@@ -12,7 +12,7 @@ use crate::device::cpu::IoPort;
 use crate::device::framebuffer::{self, CHAR_WIDTH};
 use crate::device::pic::{Irq, PIC};
 use crate::device::terminal;
-use crate::interrupt::dispatcher::{IntVectors, InterruptVector};
+use crate::interrupt::dispatcher::{unlock_int_vectors, IntVectors, InterruptVector};
 use crate::interrupt::isr::ISR;
 use crate::library::once::Once;
 use crate::thread::scheduler::scheduler;
@@ -49,12 +49,18 @@ const TIMER_INTERRUPT_INTERVAL_MS: usize = 1;
 /// Spinner animation interval in milliseconds.
 const SPINNER_INTERVAL_MS: usize = 250;
 
+/// Yield interval for thread switching in milliseconds.
+const YIELD_INTERVAL_MS: usize = 10;
+
 /// Global timer instance
 static TIMER: Once<Timer> = Once::new();
 
 /// System time in milliseconds.
 /// This variable is updated by the timer interrupt service routine.
 static SYSTEM_TIME: AtomicUsize = AtomicUsize::new(0);
+
+/// Tracks the last time a thread was yielded in the PIT ISR.
+static LAST_YIELD_TIME: AtomicUsize = AtomicUsize::new(0);
 
 /// Characters used for the spinner animation.
 static SPINNER_CHARS: &[char] = &['|', '/', '-', '\\'];
@@ -85,15 +91,27 @@ struct TimerISR {
 impl ISR for TimerISR {
     /// Handle the timer interrupt.
     /// This function updates the system time and draws a spinner on the screen.
+    /// Yields the CPU at a fixed interval for thread switching.
     fn trigger(&self) {
-        let current_time = SYSTEM_TIME.fetch_add(self.interval_ms, Ordering::Relaxed);
-        if current_time % SPINNER_INTERVAL_MS == 0 {
-            let spinner_index = (current_time / SPINNER_INTERVAL_MS) % SPINNER_CHARS.len();
+        let prev_time = SYSTEM_TIME.fetch_add(self.interval_ms, Ordering::Relaxed);
+        let current_time = prev_time + self.interval_ms;
+
+        if prev_time % SPINNER_INTERVAL_MS == 0 {
+            let spinner_index = (prev_time / SPINNER_INTERVAL_MS) % SPINNER_CHARS.len();
             if let Some(mut fb) = terminal::framebuffer().try_lock() {
                 let x = fb.width - CHAR_WIDTH;
                 let y = 0;
                 fb.draw_char(SPINNER_CHARS[spinner_index], x, y, framebuffer::RED, framebuffer::BLACK);
             }
+        }
+
+        let last_yield = LAST_YIELD_TIME.load(Ordering::Relaxed);
+        if current_time - last_yield >= YIELD_INTERVAL_MS {
+            LAST_YIELD_TIME.store(current_time, Ordering::Relaxed);
+            unsafe {
+                unlock_int_vectors();
+            }
+            scheduler().yield_cpu();
         }
     }
 }
