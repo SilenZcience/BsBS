@@ -77,6 +77,7 @@ pub fn thread_demo() {
 fn counter_thread() {
     let id = scheduler().get_active_tid();
     let mut counter = 0usize;
+    let start_time = pit::system_time();
 
     loop {
         {
@@ -88,10 +89,11 @@ fn counter_thread() {
 
         counter += 1;
         if counter >= id * 100 {
+            let elapsed = pit::system_time() - start_time;
             {
                 let mut term = terminal().lock();
                 term.set_pos(35, 10 + id);
-                print_terminal!(&mut term, "<Exited>");
+                print_terminal!(&mut term, "<Exited (Finished after {}ms)>", elapsed);
                 drop(term);
             }
             scheduler().exit();
@@ -102,12 +104,14 @@ fn counter_thread() {
 }
 
 fn speaker_thread() {
+    let start_time = pit::system_time();
     tetris();
 
+    let elapsed = pit::system_time() - start_time;
     let id = scheduler().get_active_tid();
     let mut term = terminal().lock();
     term.set_pos(35, 10 + id);
-    print_terminal!(&mut term, "<Speaker Exited>");
+    print_terminal!(&mut term, "<Speaker Exited (Finished after {}ms)>", elapsed);
     drop(term);
 
     scheduler().exit();
