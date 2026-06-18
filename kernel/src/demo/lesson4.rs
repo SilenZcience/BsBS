@@ -7,6 +7,8 @@
  */
 use log::info;
 use crate::coroutine::coroutine::Coroutine;
+use crate::device::pit;
+use crate::device::speaker::tetris;
 use crate::device::terminal::terminal;
 use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
@@ -48,10 +50,9 @@ fn coroutine_loop(coroutine: &mut Coroutine) {
     }
 }
 
-/// A demo function showcasing threads.
-/// It starts five threads, each incrementing a counter and printing it to the terminal in an endless loop.
-/// The threads yield the CPU to the next thread after each print.
-/// The first thread also kills the other four threads after a certain number of iterations and finally exits itself, ending the demo.
+/// A demo function showcasing preemptive multithreading.
+/// It starts three counter threads and one speaker thread.
+/// The PIT drives thread switching every 10ms.
 pub fn thread_demo() {
     // Initialize scheduler first, so the idle thread takes ID 0
     // Edit: not neccesseray anymore, since first ini in boot.rs
@@ -63,12 +64,16 @@ pub fn thread_demo() {
         sched.ready(thread);
     }
 
+    let speaker = Thread::new(speaker_thread);
+    log::info!("Started speaker thread with ID={}", speaker.id());
+    sched.ready(speaker);
+
     sched.schedule();
 }
 
-/// The function executed by each thread in the thread demo.
-/// It increments a counter and prints it to the terminal in an endless loop,
-/// yielding the CPU to the next thread after each print.
+/// The function executed by each counter thread.
+/// It increments a counter and prints it to the terminal,
+/// then waits 100ms to give the PIT a chance to switch threads.
 fn counter_thread() {
     let id = scheduler().get_active_tid();
     let mut counter = 0usize;
@@ -81,36 +86,29 @@ fn counter_thread() {
             drop(term);
         }
 
-        // Thread ID=1 kills the others at different thresholds
-        if id == 1 {
-            for target in 2..=5 {
-                if counter == target * 100 {
-                    scheduler().kill(target);
-                    {
-                        let mut term = terminal().lock();
-                        term.set_pos(35, 10 + target);
-                        print_terminal!(&mut term, "<Killed by Thread[{}]>", id);
-                        drop(term);
-                    }
-                }
-            }
-
-            if counter >= 600 {
-                {
-                    let mut term = terminal().lock();
-                    term.set_pos(35, 10 + id);
-                    print_terminal!(&mut term, "<Exited>");
-                    drop(term);
-                }
-                scheduler().exit();
-            }
-        }
-
         counter += 1;
-        for _ in 0..1000000 {
-            // fake sleep
+        if counter >= id * 100 {
+            {
+                let mut term = terminal().lock();
+                term.set_pos(35, 10 + id);
+                print_terminal!(&mut term, "<Exited>");
+                drop(term);
+            }
+            scheduler().exit();
         }
 
-        scheduler().yield_cpu();
+        pit::wait(100);
     }
+}
+
+fn speaker_thread() {
+    tetris();
+
+    let id = scheduler().get_active_tid();
+    let mut term = terminal().lock();
+    term.set_pos(35, 10 + id);
+    print_terminal!(&mut term, "<Speaker Exited>");
+    drop(term);
+
+    scheduler().exit();
 }
