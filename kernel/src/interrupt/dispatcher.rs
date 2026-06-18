@@ -83,7 +83,7 @@ pub unsafe fn unlock_int_vectors() {
 /// Every interrupt is routed here, if not specified otherwise in the IDT.
 pub fn dispatch_interrupt(vector: u8, stack_frame: InterruptStackFrame, error_code: Option<u64>) {
     let _ = stack_frame;
-    debug!("Handling interrupt vector {}", vector); // NOTE: race condition if print to screen
+    // debug!("Handling interrupt vector {}", vector); // NOTE: race condition if print to screen
 
     // match error_code { // fuck this println
     //     Some(code) => println!("interrupt: {} error_code: {}", vector, code),

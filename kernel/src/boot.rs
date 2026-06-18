@@ -129,6 +129,9 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     info!("Initializing keyboard");
     crate::device::keyboard::plugin();
 
+    info!("Initializing PIT");
+    crate::device::pit::plugin();
+
     info!("Enabling interrupts");
     crate::device::cpu::enable_int();
 
