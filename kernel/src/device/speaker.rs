@@ -10,6 +10,7 @@
  */
 
 use crate::device::cpu::IoPort;
+use crate::device::pit;
 use crate::library::spinlock::Spinlock;
 
 pub static SPEAKER: Spinlock<Speaker> = Spinlock::new(Speaker::new());
@@ -123,7 +124,7 @@ impl Speaker {
         unsafe { self.pit_data2_port.outb((counter >> 8)   as u8); } // Load channel 2 (high byte)
 
         self.on();
-        self.delay(duration);
+        pit::wait(duration);
         // self.off();
     }
 
@@ -142,50 +143,6 @@ impl Speaker {
         unsafe { self.ppi_port.outb(ppi_value & 0xFCu8); } // 0xFC == 0b11111100
     }
 
-    /// Return the current value of the PIT counter (16-bit).
-    /// Used by `delay()` to check if the counter has reached 0 or has been reloaded.
-    fn read_counter(&mut self) -> u16 {
-        // Latch counter 0 (prevents the value from changing while we read it)
-        // Command: 00 (channel 0), 00 (latch command), 000 (don't care mode), 0 (binary)
-        // = 0000_0000 = 0x00
-        unsafe { self.pit_ctrl_port.outb(0x00u8); }
-
-        let low  = unsafe { self.pit_data0_port.inb() }; // Read channel 0 (low byte)
-        let high = unsafe { self.pit_data0_port.inb() }; // Read channel 0 (high byte)
-
-        ((high as u16) << 8) | (low as u16)
-    }
-
-    /// Wait for a given amount of time in milliseconds using counter 0 of the PIT.
-    /// Mode 2 (rate generator) with a reload value of 1193 (0x04a9) is used.
-    /// This means that the counter will count down from 1193 to 0 and then reload itself.
-    /// Counting from 1193 to 0 takes 1ms.
-    fn delay(&mut self, duration: usize) {
-        const PIT_RELOAD_1MS: usize = PIT_FREQUENCY / 1000;
-
-        // Configure PIT counter 0 for mode 2 (rate generator)
-        // Control byte: 00 (counter 0), 11 (load LSB then MSB), 010 (mode 2), 0 (binary)
-        // = 0011_0100 = 0x34
-        unsafe { self.pit_ctrl_port.outb(0x34u8); }
-
-        unsafe { self.pit_data0_port.outb((PIT_RELOAD_1MS & 0xFF) as u8); } // Load channel 0 (low byte)
-        unsafe { self.pit_data0_port.outb((PIT_RELOAD_1MS >> 8)   as u8); } // Load channel 0 (high byte)
-
-        // Wait for the counter to reach 0 and reload 'duration' times
-        let mut ms_count = 0;
-        let mut last_counter = self.read_counter();
-
-        while ms_count < duration {
-            let counter = self.read_counter();
-
-            // counter wrapped around -> passed another 1ms
-            if counter > last_counter {
-                ms_count += 1;
-            }
-
-            last_counter = counter;
-        }
-    }
 }
 
 /// Plays the Tetris theme using the PC speaker.
@@ -215,7 +172,7 @@ pub fn tetris() {
     speaker.play(1056, 500);
     speaker.play(880, 500);
     speaker.play(880, 500);
-    speaker.delay(250);
+    pit::wait(250);
     speaker.play(1188, 500);
     speaker.play(1408, 250);
     speaker.play(1760, 500);
@@ -234,7 +191,7 @@ pub fn tetris() {
     speaker.play(1056, 500);
     speaker.play(880, 500);
     speaker.play(880, 500);
-    speaker.delay(500);
+    pit::wait(500);
     speaker.play(1320, 500);
     speaker.play(990, 250);
     speaker.play(1056, 250);
@@ -256,7 +213,7 @@ pub fn tetris() {
     speaker.play(1056, 500);
     speaker.play(880, 500);
     speaker.play(880, 500);
-    speaker.delay(250);
+    pit::wait(250);
     speaker.play(1188, 500);
     speaker.play(1408, 250);
     speaker.play(1760, 500);
@@ -275,7 +232,7 @@ pub fn tetris() {
     speaker.play(1056, 500);
     speaker.play(880, 500);
     speaker.play(880, 500);
-    speaker.delay(500);
+    pit::wait(500);
     speaker.play(660, 1000);
     speaker.play(528, 1000);
     speaker.play(594, 1000);
