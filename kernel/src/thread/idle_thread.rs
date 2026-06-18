@@ -15,6 +15,7 @@ use crate::thread::scheduler::scheduler;
 pub fn idle_thread() {
     loop {
         // println!("idle");
+        scheduler().cleanup_terminated_threads();
         scheduler().yield_cpu();
     }
 }

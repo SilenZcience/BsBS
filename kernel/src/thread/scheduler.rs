@@ -10,6 +10,7 @@
 use alloc::boxed::Box;
 use core::fmt::Display;
 use core::{fmt, ptr};
+use log::debug;
 use crate::allocator;
 use crate::library::once::Once;
 use crate::library::queue::LinkedQueue;
@@ -44,6 +45,7 @@ pub unsafe extern "C" fn unlock_scheduler() {
 struct SchedulerState {
     active_thread: Option<Box<Thread>>,
     ready_queue: LinkedQueue<Box<Thread>>,
+    terminated_threads: LinkedQueue<Box<Thread>>,
     initialized: bool
 }
 
@@ -60,6 +62,7 @@ impl Scheduler {
         let state = SchedulerState {
             active_thread: Some(Thread::new(idle_thread)),
             ready_queue: LinkedQueue::new(),
+            terminated_threads: LinkedQueue::new(),
             initialized: false
         };
 
@@ -99,15 +102,19 @@ impl Scheduler {
         // The idle thread never exits, so there must be at least one thread in the queue.
         let next = state.ready_queue.dequeue().unwrap();
 
+        let current_ptr: *mut Thread = &mut *current;
+
         // Set the dequeued thread as the active thread,
         // overwriting the current one, which we want to exit.
         state.active_thread = Some(next);
 
+        state.terminated_threads.enqueue(current);
+
         unsafe {
             // Switch to the next thread.
-            // `current` still contains the old thread we want to exit,
+            // `current_ptr` still points to the old thread we want to exit,
             // while `state.active_thread` contains the next one.
-            Thread::switch(current.as_mut(), state.active_thread.as_mut().unwrap().as_mut());
+            Thread::switch(current_ptr, state.active_thread.as_mut().unwrap().as_mut());
         }
     }
 
@@ -147,8 +154,19 @@ impl Scheduler {
         }
     }
 
+    pub fn cleanup_terminated_threads(&self) {
+        let mut state = self.state.lock();
+
+        while let Some(thread) = state.terminated_threads.dequeue() {
+            debug!("Freeing terminated thread ID={}", thread.id());
+            drop(thread);
+        }
+    }
+
     /// Kill the thread with the given ID by removing it from the ready queue.
     pub fn kill(&self, to_kill_id: usize) {
+        debug!("Killing thread with ID={}", to_kill_id);
+
         let mut state = self.state.lock();
 
         state.ready_queue.remove(|thread| thread.id() == to_kill_id);
@@ -160,6 +178,6 @@ impl Display for Scheduler {
         let state = self.state.lock();
         let active = state.active_thread.as_ref().unwrap();
 
-        write!(f, "active: {}, ready: {}", active, state.ready_queue)
+        write!(f, "active: {}, ready: {}, terminated: {}", active, state.ready_queue, state.terminated_threads)
     }
 }
