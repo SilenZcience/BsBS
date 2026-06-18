@@ -38,6 +38,15 @@
             "dependsOn": "build"
         },
         {
+            "label": "qemu-wsl-production",
+            "type": "shell",
+            "isBackground": false,
+            "command": "cargo",
+            "args": [ "make", "--no-workspace", "--profile", "production", "qemu-wsl" ],
+            "problemMatcher": [],
+            "dependsOn": "build"
+        },
+        {
             "label": "debug",
             "type": "shell",
             "isBackground": true,

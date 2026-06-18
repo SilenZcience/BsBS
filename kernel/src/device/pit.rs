@@ -44,7 +44,7 @@ const TIMER_FREQUENCY: usize = 1193182;
 const NANOSECONDS_PER_TICK: usize = 1_000_000_000 / TIMER_FREQUENCY;
 
 /// The interval at which the timer should generate interrupts (1 ms).
-const TIMER_INTERRUPT_INTERVAL_MS: usize = 5;
+const TIMER_INTERRUPT_INTERVAL_MS: usize = 1;
 
 /// Spinner animation interval in milliseconds.
 const SPINNER_INTERVAL_MS: usize = 250;

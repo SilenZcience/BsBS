@@ -64,9 +64,9 @@ pub fn thread_demo() {
         sched.ready(thread);
     }
 
-    let speaker = Thread::new(speaker_thread);
-    log::info!("Started speaker thread with ID={}", speaker.id());
-    sched.ready(speaker);
+    // let speaker = Thread::new(speaker_thread);
+    // log::info!("Started speaker thread with ID={}", speaker.id());
+    // sched.ready(speaker);
 
     sched.schedule();
 }
@@ -87,8 +87,12 @@ fn counter_thread() {
             drop(term);
         }
 
+        if counter % 10 == 0 {
+            scheduler().yield_cpu();
+        }
+
         counter += 1;
-        if counter >= id * 100 {
+        if counter >= 1000 {
             let elapsed = pit::system_time() - start_time;
             {
                 let mut term = terminal().lock();
@@ -98,8 +102,6 @@ fn counter_thread() {
             }
             scheduler().exit();
         }
-
-        pit::wait(100);
     }
 }
 
