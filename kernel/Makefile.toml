@@ -62,3 +62,19 @@ dependencies = [ "remove-kernel" ]
 [tasks.remove-kernel]
 command = "rm"
 args = [ "-f", "${KERNEL}" ]
+
+[tasks.compile-peanut-gb]
+command = "${CC}"
+cwd = "${BUILD_DIRECTORY}"
+args = [
+    # Compiler flags
+    "-c", "-nostdlib", "-ffreestanding", "-fno-stack-protector", "-fpic", "-std=gnu99", "-O${CC_OPT_LEVEL}", "-g", "-march=${TARGET_CPU}", "-mno-mmx", "-mno-sse", "-mno-avx",
+
+    # Source files
+    "${SOURCE_DIRECTORY}/demo/lesson6/peanut-gb.c"
+]
+condition = { files_modified = { input = [
+    "${SOURCE_DIRECTORY}/demo/lesson6/peanut-gb.c"
+], output = [
+    "${BUILD_DIRECTORY}/peanut-gb.o"
+] } }
