@@ -101,7 +101,45 @@ impl Bitmap {
             &*(header_slice.as_ptr() as *const BitmapFileHeader)
         };
 
-        todo!("Bitmap::from_bytes() is not yet implemented");
+        if header.signature != [b'B', b'M'] {
+            return None;
+        }
+
+        let bits_per_pixel = header.info_header.bits_per_pixel;
+        let bmp_width_val = header.info_header.width;
+        let bmp_height_val = header.info_header.height;
+        let data_offset = header.data_offset as usize;
+
+        if bits_per_pixel != 24 {
+            return None;
+        }
+
+        let width = bmp_width_val as usize;
+        let height = bmp_height_val.unsigned_abs() as usize;
+        let row_bytes = width * 3;
+        let row_stride = (row_bytes + 3) & !3;
+
+        if data.len() < data_offset + row_stride * height {
+            return None;
+        }
+
+        let mut pixel_data = Vec::with_capacity(width * height);
+        let is_bottom_up = header.info_header.height > 0;
+
+        for row in 0..height {
+            let bmp_row = if is_bottom_up { height - 1 - row } else { row };
+            let row_start = data_offset + bmp_row * row_stride;
+
+            for col in 0..width {
+                let p = row_start + col * 3;
+                let b = data[p];
+                let g = data[p + 1];
+                let r = data[p + 2];
+                pixel_data.push(color(r, g, b, 0xFF));
+            }
+        }
+
+        Some(Bitmap { header: *header, pixel_data })
     }
 
     /// Get the width of the bitmap in pixels.

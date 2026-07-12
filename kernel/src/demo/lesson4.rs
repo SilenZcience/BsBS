@@ -60,12 +60,12 @@ pub fn thread_demo() {
 
     for _ in 0..5 {
         let thread = Thread::new(counter_thread);
-        log::info!("Started thread with ID={}", thread.id());
+        info!("Started thread with ID={}", thread.id());
         sched.ready(thread);
     }
 
     // let speaker = Thread::new(speaker_thread);
-    // log::info!("Started speaker thread with ID={}", speaker.id());
+    // info!("Started speaker thread with ID={}", speaker.id());
     // sched.ready(speaker);
 
     sched.schedule();

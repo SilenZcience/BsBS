@@ -149,29 +149,34 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
 
     info!("Boot sequence finished");
 
-    let fs = crate::filesystem::tarfs::filesystem();
-    let filename = "lorem.txt";
-    if let Ok(handle) = fs.open(filename) {
-        let size = fs.size(handle).unwrap_or(0);
-        info!("Opened '{}' ({} bytes)", filename, size);
-        let mut buf = alloc::vec![0u8; size];
-        if let Ok(n) = fs.read(handle, &mut buf) {
-            if let Ok(text) = core::str::from_utf8(&buf[..n]) {
-                println!("File contents ('{}'):", filename);
-                println!("{}", text);
+
+    println!("Demo Menu:");
+    println!("1. Text Demo");
+    println!("2. Keyboard Demo");
+    println!("3. Heap Demo");
+    println!("4. Speaker Demo");
+    println!("5. Coroutine Demo");
+    println!("6. Thread Demo");
+    println!("7. Text File Demo");
+    println!("8. Bitmap Demo");
+
+    use crate::device::keyboard::keyboard_buffer;
+    loop {
+        let event = keyboard_buffer().poll_key_press();
+        if let Some(c) = event.ascii() {
+            match c {
+                '1' => { crate::demo::lesson1::text_demo(); break; }
+                '2' => { crate::demo::lesson1::keyboard_demo(); break; }
+                '3' => { crate::demo::lesson2::heap_demo(); break; }
+                '4' => { crate::demo::lesson2::speaker_demo(); break; }
+                '5' => { crate::demo::lesson4::coroutine_demo(); break; }
+                '6' => { crate::demo::lesson4::thread_demo(); break; }
+                '7' => { crate::demo::lesson6fs::text_file_demo(); break; }
+                '8' => { crate::demo::lesson6fs::bitmap_demo(); break; }
+                _ => {}
             }
         }
-        let _ = fs.close(handle);
-    } else {
-        info!("Could not open '{}'", filename);
     }
-
-    // crate::demo::lesson1::keyboard_demo();
-    // crate::demo::lesson1::text_demo();
-    // crate::demo::lesson2::heap_demo();
-    // crate::demo::lesson2::speaker_demo();
-    // crate::demo::lesson4::coroutine_demo();
-    // crate::demo::lesson4::thread_demo();
 
     info!("Hello from the kernel!");
     info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);
