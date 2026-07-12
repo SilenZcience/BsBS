@@ -36,6 +36,7 @@ mod multiboot;
 mod consts;
 mod demo;
 mod allocator;
+mod filesystem;
 
 extern crate alloc;
 
@@ -114,6 +115,17 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     info!("Initializing heap allocator");
     crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
 
+    if let Some(module) = multiboot.find_tag::<multiboot::ModuleTag>(multiboot::TagType::Module) {
+        info!("Found module: '{}'", module.name());
+        let module_data = module.as_slice();
+        let archive = tar_no_std::TarArchiveRef::new(module_data)
+            .expect("Failed to parse tar archive");
+        crate::filesystem::tarfs::init_filesystem(archive);
+        info!("Filesystem initialized");
+    } else {
+        panic!("No initrd module found");
+    }
+
     info!("Initializing scheduler");
     scheduler();
 
@@ -137,12 +149,29 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
 
     info!("Boot sequence finished");
 
+    let fs = crate::filesystem::tarfs::filesystem();
+    let filename = "lorem.txt";
+    if let Ok(handle) = fs.open(filename) {
+        let size = fs.size(handle).unwrap_or(0);
+        info!("Opened '{}' ({} bytes)", filename, size);
+        let mut buf = alloc::vec![0u8; size];
+        if let Ok(n) = fs.read(handle, &mut buf) {
+            if let Ok(text) = core::str::from_utf8(&buf[..n]) {
+                println!("File contents ('{}'):", filename);
+                println!("{}", text);
+            }
+        }
+        let _ = fs.close(handle);
+    } else {
+        info!("Could not open '{}'", filename);
+    }
+
     // crate::demo::lesson1::keyboard_demo();
     // crate::demo::lesson1::text_demo();
     // crate::demo::lesson2::heap_demo();
     // crate::demo::lesson2::speaker_demo();
     // crate::demo::lesson4::coroutine_demo();
-    crate::demo::lesson4::thread_demo();
+    // crate::demo::lesson4::thread_demo();
 
     info!("Hello from the kernel!");
     info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);

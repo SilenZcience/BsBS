@@ -5,6 +5,8 @@
  *         Fabian Ruhland, Heinrich Heine University Duesseldorf, 2026-01-07
  * License: GPLv3
  */
+use core::cmp::max;
+use crate::library::bitmap::Bitmap;
 use crate::multiboot;
 
 /// Represents a linear framebuffer for graphics output.
