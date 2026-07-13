@@ -14,7 +14,6 @@ use crate::interrupt::idt;
 use crate::interrupt::idt::InterruptStackFrame;
 use crate::interrupt::isr::ISR;
 use crate::library::spinlock::Spinlock;
-use log::debug;
 
 #[derive(Debug, Copy, Clone)]
 /// Enumeration of all standardized interrupt vectors.

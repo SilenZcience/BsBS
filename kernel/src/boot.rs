@@ -8,6 +8,7 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(unsafe_cell_access)]
+#![feature(c_size_t)]
 
 // Silence compiler warnings.
 // This is done to avoid overwhelming compiler output when building the OS at the beginning.
@@ -159,6 +160,8 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     println!("6. Thread Demo");
     println!("7. Text File Demo");
     println!("8. Bitmap Demo");
+    println!("9. Peanut-GB Emulator");
+
 
     use crate::device::keyboard::keyboard_buffer;
     loop {
@@ -173,6 +176,7 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
                 '6' => { crate::demo::lesson4::thread_demo(); break; }
                 '7' => { crate::demo::lesson6fs::text_file_demo(); break; }
                 '8' => { crate::demo::lesson6fs::bitmap_demo(); break; }
+                '9' => { crate::demo::lesson6::peanut_gb::play("roms/2048.gb"); break; }
                 _ => {}
             }
         }

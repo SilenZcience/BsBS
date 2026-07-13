@@ -8,7 +8,7 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use crate::filesystem::tarfs::{filesystem, FsError};
-use crate::library::bitmap::Compression::BitFields;
+// use crate::library::bitmap::Compression::BitFields;
 
 /// Represents a bitmap image loaded from a BMP file.
 /// The pixel data is stored as a vector of 32-bit color values in ARGB format.
