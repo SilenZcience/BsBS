@@ -44,11 +44,12 @@ condition = { files_modified = { input = [
 
 [tasks.link]
 command = "${LINKER}"
-args = [ "-n", "-T", "${LINKER_FILE}", "-o", "${KERNEL}", "${ASM_OBJECT}", "${RUST_OBJECT}", "-z", "noexecstack" ]
-dependencies = [ "compile", "build-asm" ]
+args = [ "-n", "-T", "${LINKER_FILE}", "-o", "${KERNEL}", "${ASM_OBJECT}", "${BUILD_DIRECTORY}/peanut-gb.o", "${RUST_OBJECT}", "-z", "noexecstack" ]
+dependencies = [ "compile", "build-asm", "compile-peanut-gb" ]
 condition = { files_modified = { input = [
     "${ASM_OBJECT}",
     "${RUST_OBJECT}",
+    "${BUILD_DIRECTORY}/peanut-gb.o",
     "${LINKER_FILE}"
 ], output = [
     "${KERNEL}"
