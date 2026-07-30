@@ -8,8 +8,23 @@
 
 use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, c_size_t, c_void, CStr};
-use log::error;
+use core::fmt::Write;
+use log::{error, info};
 use crate::library::once::Once;
+use crate::library::spinlock::Spinlock;
+
+/// Debug info struct matching the C struct `gb_cart_debug_info`.
+#[repr(C)]
+struct GbCartDebugInfo {
+    enable_cart_ram: u8,
+    cart_ram: u8,
+    mbc: u8,
+    cart_ram_bank: u8,
+    cart_mode_select: u8,
+    num_ram_banks: u32,
+    num_rom_banks_mask: u32,
+    selected_rom_bank: u32,
+}
 
 unsafe extern "C" {
     /// Get the size of the `gb_s` structure (implemented in `peanut-gb.c`).
@@ -22,6 +37,9 @@ unsafe extern "C" {
     /// If no button is pressed, all bits are set to 1 (0xff).
     /// The buttons are represented by the `JoypadButton` enum.
     fn gb_get_joypad_ptr(gb: *mut c_void) -> *mut u8;
+
+    /// Get debug info about the cart RAM state from the `gb_s` structure.
+    fn gb_debug_cart_info(gb: *mut c_void, info: *mut GbCartDebugInfo);
 
     /// Initialization function for the PeanutGB emulator.
     /// The `gb` parameter must point to block of memory large enough to hold the `gb_s` structure.
@@ -143,6 +161,15 @@ static PALETTE: &[u32] = &[
 /// The ROM file to be played by the emulator.
 static ROM: Once<Vec<u8>> = Once::new();
 
+/// The battery-backed cartridge RAM.
+static CART_RAM: Spinlock<Vec<u8>> = Spinlock::new(alloc::vec::Vec::new());
+
+/// Counter for cart RAM writes (for debugging).
+static CART_RAM_WRITE_COUNT: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
+
+/// Counter for cart RAM reads (for debugging).
+static CART_RAM_READ_COUNT: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
+
 /// Read a byte from the ROM file at the offset specified by `addr`.
 /// This is a callback function for the PeanutGB emulator.
 unsafe extern "C" fn gb_rom_read(_gb: *mut c_void, addr: u32) -> u8 {
@@ -154,8 +181,8 @@ unsafe extern "C" fn gb_rom_read(_gb: *mut c_void, addr: u32) -> u8 {
 ///
 /// This is mostly needed for save game support and part of an optional assignment.
 unsafe extern "C" fn gb_cart_ram_read(_gb: *mut c_void, addr: u32) -> u8 {
-    // TODO: Read a byte from the save RAM (optional assignment)
-    0
+    CART_RAM_READ_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+    CART_RAM.lock()[addr as usize]
 }
 
 /// Write a byte to the save RAM at the offset specified by `addr`.
@@ -163,7 +190,8 @@ unsafe extern "C" fn gb_cart_ram_read(_gb: *mut c_void, addr: u32) -> u8 {
 ///
 /// This is mostly needed for save game support and part of an optional assignment.
 unsafe extern "C" fn gb_cart_ram_write(_gb: *mut c_void, addr: u32, val: u8) {
-    // TODO: Write a byte to the save RAM (optional assignment)
+    CART_RAM_WRITE_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+    CART_RAM.lock()[addr as usize] = val;
 }
 
 /// Draw a line of pixels from the Game Boy screen to the framebuffer.
@@ -198,6 +226,7 @@ pub fn play(rom_path: &str) {
     use crate::device::key::Scancode;
     use crate::device::pit;
     use crate::device::keyboard::keyboard_buffer;
+    use crate::device::serial::COM3;
 
     let fs = crate::filesystem::tarfs::filesystem();
     let handle = fs.open(rom_path).expect("Failed to open ROM file");
@@ -226,25 +255,87 @@ pub fn play(rom_path: &str) {
         panic!("Failed to initialize PeanutGB (Error: {:?})", result);
     }
 
+    // {
+    //     let rom = ROM.get().unwrap();
+    //     if rom.len() > 0x0149 {
+    //         let mbc_type = rom[0x0147];
+    //         let ram_size_code = rom[0x0149];
+    //         info!("ROM header: MBC type=0x{:02X}, RAM size code=0x{:02X}", mbc_type, ram_size_code);
+    //     }
+    // }
+
+    let mut ram_size: c_size_t = 0;
+    let ram_result = unsafe { gb_get_save_size_s(gb_ptr, &mut ram_size) };
+    // info!("gb_get_save_size_s returned ram_result={}, ram_size={}", ram_result, ram_size);
+    if ram_result == 0 && ram_size > 0 {
+        *CART_RAM.lock() = alloc::vec![0u8; ram_size];
+
+        // Build save file path from ROM path: "roms/2048.gb" -> "roms/2048.sav"
+        let save_file_path = {
+            let path_str = rom_path;
+            if let Some(dot_pos) = path_str.rfind('.') {
+                let base = &path_str[..dot_pos];
+                let mut result = alloc::string::String::new();
+                result.push_str(base);
+                result.push_str(".sav");
+                result
+            } else {
+                let mut result = alloc::string::String::new();
+                result.push_str(path_str);
+                result.push_str(".sav");
+                result
+            }
+        };
+
+        if let Ok(handle) = fs.open(&save_file_path) {
+            if let Ok(file_size) = fs.size(handle) {
+                let copy_len = file_size.min(ram_size);
+                let mut buf = alloc::vec![0u8; copy_len];
+                if let Ok(n) = fs.read(handle, &mut buf) {
+                    let mut ram = CART_RAM.lock();
+                    ram[..n].copy_from_slice(&buf[..n]);
+                    info!("Loaded save file '{}' ({} bytes)", save_file_path, n);
+                    // if n >= 64 {
+                    //     info!("CART_RAM[0x0000..0x0080]: {:02X?}", &ram[..0x80]);
+                    //     info!("CART_RAM[0x0100..0x0180]: {:02X?}", &ram[0x100..0x180]);
+                    //     info!("CART_RAM[0x1000..0x1080]: {:02X?}", &ram[0x1000..0x1080]);
+                    //     info!("CART_RAM[0x1F00..0x1F80]: {:02X?}", &ram[0x1F00..0x1F80]);
+                    //     info!("CART_RAM[0x2000..0x2080]: {:02X?}", &ram[0x2000..0x2080]);
+                    // }
+                }
+            }
+            let _ = fs.close(handle);
+        } else {
+            info!("No save file found at '{}'", save_file_path);
+        }
+    }
+
     unsafe { gb_init_lcd(gb_ptr, lcd_draw_line as *const c_void); }
 
     let joypad_ptr = unsafe { gb_get_joypad_ptr(gb_ptr) };
+    let mut running = true;
+    let mut frame_count: usize = 0;
+    let mut last_fps_time = pit::system_time();
 
-    loop {
+    while running {
         let frame_start = pit::system_time();
 
         while let Some(event) = keyboard_buffer().pop_key_event() {
             if let Some(scancode) = event.scancode() {
+                if scancode == Scancode::Escape && event.pressed() {
+                    running = false;
+                    break;
+                }
                 let pressed = event.pressed();
                 let bit = match scancode {
-                    Scancode::Up => Some(JoypadButton::Up as u8),
-                    Scancode::Down => Some(JoypadButton::Down as u8),
-                    Scancode::Left => Some(JoypadButton::Left as u8),
-                    Scancode::Right => Some(JoypadButton::Right as u8),
-                    Scancode::Y => Some(JoypadButton::A as u8),
-                    Scancode::X => Some(JoypadButton::B as u8),
-                    Scancode::Enter => Some(JoypadButton::Start as u8),
-                    Scancode::Backspace => Some(JoypadButton::Select as u8),
+                    Scancode::W => Some(JoypadButton::Up as u8),
+                    Scancode::S => Some(JoypadButton::Down as u8),
+                    Scancode::A => Some(JoypadButton::Left as u8),
+                    Scancode::D => Some(JoypadButton::Right as u8),
+                    Scancode::Q => Some(JoypadButton::A as u8),
+                    Scancode::E => Some(JoypadButton::B as u8),
+                    Scancode::Space => Some(JoypadButton::Start as u8),
+                    Scancode::Enter => Some(JoypadButton::Select as u8),
                     _ => None,
                 };
                 if let Some(mask) = bit {
@@ -259,11 +350,70 @@ pub fn play(rom_path: &str) {
             }
         }
 
+        if !running {
+            break;
+        }
+
         unsafe { gb_run_frame(gb_ptr); }
+
+        frame_count += 1;
+        let now = pit::system_time();
+        let fps_elapsed = now - last_fps_time;
+        if fps_elapsed >= 1000 {
+            let fps = frame_count * 1000 / fps_elapsed;
+            frame_count = 0;
+            last_fps_time = now;
+
+            // let reads = CART_RAM_READ_COUNT.swap(0, core::sync::atomic::Ordering::Relaxed);
+            // let writes = CART_RAM_WRITE_COUNT.swap(0, core::sync::atomic::Ordering::Relaxed);
+            // info!("cart_ram_reads:{} cart_ram_writes:{}", reads, writes);
+
+            // let mut dbg = GbCartDebugInfo {
+            //     enable_cart_ram: 0, cart_ram: 0, mbc: 0,
+            //     cart_ram_bank: 0, cart_mode_select: 0,
+            //     num_ram_banks: 0, num_rom_banks_mask: 0, selected_rom_bank: 0,
+            // };
+            // unsafe { gb_debug_cart_info(gb_ptr, &mut dbg); }
+            // info!("MBC state: mbc={} enable_cart_ram={} cart_ram={} ram_banks={} cart_ram_bank={} mode_sel={} rom_bank={}/{}",
+            //     dbg.mbc, dbg.enable_cart_ram, dbg.cart_ram, dbg.num_ram_banks,
+            //     dbg.cart_ram_bank, dbg.cart_mode_select, dbg.selected_rom_bank, dbg.num_rom_banks_mask + 1);
+
+            let mut fps_str = alloc::string::String::new();
+            let _ = write!(&mut fps_str, "FPS:{}", fps);
+            while fps_str.len() < 8 {
+                fps_str.push(' ');
+            }
+
+            let mut fb = crate::device::terminal::framebuffer().lock();
+            let str_pixel_width = fps_str.len() * crate::device::framebuffer::CHAR_WIDTH;
+            let x = fb.width.saturating_sub(str_pixel_width);
+            let y = fb.height.saturating_sub(crate::device::framebuffer::CHAR_HEIGHT);
+            fb.draw_str(&fps_str, x, y, crate::device::framebuffer::WHITE, crate::device::framebuffer::BLACK);
+        }
 
         let elapsed = pit::system_time() - frame_start;
         if elapsed < MS_PER_FRAME {
             pit::wait(MS_PER_FRAME - elapsed);
         }
     }
+
+    // {
+    //     let ram = CART_RAM.lock();
+    //     info!("Export: CART_RAM[0x0000..0x0080]: {:02X?}", &ram[..0x80]);
+    //     info!("Export: CART_RAM[0x0100..0x0180]: {:02X?}", &ram[0x100..0x180]);
+    //     info!("Export: CART_RAM[0x1000..0x1080]: {:02X?}", &ram[0x1000..0x1080]);
+    //     info!("Export: CART_RAM[0x1F00..0x1F80]: {:02X?}", &ram[0x1F00..0x1F80]);
+    //     info!("Export: CART_RAM[0x2000..0x2080]: {:02X?}", &ram[0x2000..0x2080]);
+    // }
+    let ram = CART_RAM.lock();
+    let mut com3 = COM3.lock();
+    com3.init();
+    info!("Writing {} cart RAM bytes to COM3 for save", ram.len());
+    if ram.is_empty() {
+        info!("CART_RAM is empty - nothing to save!");
+    }
+    for &byte in ram.iter() {
+        com3.write_raw_byte(byte);
+    }
+    info!("Save data sent to COM3 serial");
 }

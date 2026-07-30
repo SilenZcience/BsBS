@@ -12,6 +12,7 @@ use crate::device::cpu::IoPort;
 
 /// Standard COM port for kernel output via the logger
 pub static COM1: Spinlock<ComPort> = Spinlock::new(ComPort::new(ComBaseAddress::Com1));
+pub static COM3: Spinlock<ComPort> = Spinlock::new(ComPort::new(ComBaseAddress::Com3));
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -93,6 +94,14 @@ impl ComPort {
                 self.write_byte(b'\r');
             }
             // Wait until the port is ready to accept data
+            while self.line_status_port.inb() & LineStatus::READY_TO_WRITE.bits() == 0 {}
+            self.data_port.outb(byte);
+        }
+    }
+
+    /// Write a single raw byte to the COM port without any transformation.
+    pub fn write_raw_byte(&mut self, byte: u8) {
+        unsafe {
             while self.line_status_port.inb() & LineStatus::READY_TO_WRITE.bits() == 0 {}
             self.data_port.outb(byte);
         }

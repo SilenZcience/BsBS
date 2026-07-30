@@ -176,7 +176,7 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
                 '6' => { crate::demo::lesson4::thread_demo(); break; }
                 '7' => { crate::demo::lesson6fs::text_file_demo(); break; }
                 '8' => { crate::demo::lesson6fs::bitmap_demo(); break; }
-                '9' => { crate::demo::lesson6::peanut_gb::play("roms/2048.gb"); break; }
+                '9' => { crate::demo::lesson6::peanut_gb::play("roms/pokemon.gb"); break; }
                 _ => {}
             }
         }
