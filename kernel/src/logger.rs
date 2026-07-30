@@ -39,9 +39,8 @@ impl log::Log for Logger {
 
     /// Print a log record to the serial port.
     fn log(&self, record: &Record) {
-        // Format: [TIME] [LEVEL] [file:line] message\n
-        // Placeholder for time, as timer is not yet implemented
-        let time = "00:00:00";
+        // Format: [UPTIME] [LEVEL] [file:line] message\n
+        let (hours, minutes, seconds) = crate::device::pit::uptime();
         let level = level_abbreviation(record.level());
         let file = record.file().unwrap_or("?");
         let line = record.line().map_or(0, |l| l);
@@ -49,8 +48,8 @@ impl log::Log for Logger {
         if let Some(mut com1) = serial::COM1.try_lock() {
             let _ = write!(
                 &mut com1,
-                "[{time}] [{level}] [{file}:{line}] ",
-                time = time,
+                "[{:02}:{:02}:{:02}] [{level}] [{file}:{line}] ",
+                hours, minutes, seconds,
                 level = level,
                 file = file,
                 line = line
@@ -63,8 +62,8 @@ impl log::Log for Logger {
             if let Some(mut terminal) = crate::device::terminal::terminal().try_lock() {
                 let _ = write!(
                     &mut terminal,
-                    "[{time}] [{level}] [{file}:{line}] ",
-                    time = time,
+                    "[{:02}:{:02}:{:02}] [{level}] [{file}:{line}] ",
+                    hours, minutes, seconds,
                     level = level,
                     file = file,
                     line = line

@@ -22,6 +22,13 @@ pub fn system_time() -> usize {
     SYSTEM_TIME.load(core::sync::atomic::Ordering::Relaxed)
 }
 
+/// Returns the system uptime as (hours, minutes, seconds)
+pub fn uptime() -> (usize, usize, usize) {
+    let ms = system_time();
+    let total_seconds = ms / 1000;
+    (total_seconds / 3600, (total_seconds % 3600) / 60, total_seconds % 60)
+}
+
 /// Wait for a specified number of milliseconds using the system time.
 pub fn wait(ms: usize) {
     let start_time = system_time();
