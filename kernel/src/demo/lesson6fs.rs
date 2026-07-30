@@ -24,7 +24,7 @@ pub fn text_file_demo() {
 }
 
 pub fn bitmap_demo() {
-    let bmp_filename = "heine.bmp";
+    let bmp_filename = "img/heine.bmp";
     match crate::library::bitmap::Bitmap::read_from_file(bmp_filename) {
         Ok(Some(bitmap)) => {
             info!("Loaded bitmap: {}x{}", bitmap.width(), bitmap.height());
