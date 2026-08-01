@@ -108,6 +108,17 @@ impl Terminal {
         self.pos = (0, 0);
     }
 
+    /// Delete the character before the cursor and move the cursor one position back.
+    pub fn backspace(&mut self) {
+        let (col, row) = self.pos;
+        if col > 0 {
+            let mut fb = self.framebuffer.lock();
+            Self::clear_cursor((col, row), &mut fb);
+            Self::draw_cursor((col - 1, row), &mut fb);
+            self.pos = (col - 1, row);
+        }
+    }
+
     /// Draw a character with the default colors at the current cursor position and advance the cursor.
     /// A newline character moves the cursor to the beginning of the next line.
     /// If the cursor reaches the end of the terminal, the screen scrolls up.

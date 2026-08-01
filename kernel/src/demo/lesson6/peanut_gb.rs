@@ -10,7 +10,6 @@ use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, c_size_t, c_void, CStr};
 use core::fmt::Write;
 use log::{error, info};
-use crate::library::once::Once;
 use crate::library::spinlock::Spinlock;
 
 /// Debug info struct matching the C struct `gb_cart_debug_info`.
@@ -147,7 +146,7 @@ const MS_PER_FRAME: usize = 1000 / TARGET_FRAME_RATE;
 /// The original Game Boy screen resolution (160x144 pixels).
 const GB_SCREEN_RES: (usize, usize) = (160, 144);
 
-const SCALE: usize = 2;
+const SCALE: usize = 4;
 
 /// The color palette used for rendering.
 /// The Game Boy supports 4 shades of gray, represented as 32-bit ARGB colors in this array.
@@ -159,7 +158,7 @@ static PALETTE: &[u32] = &[
 ];
 
 /// The ROM file to be played by the emulator.
-static ROM: Once<Vec<u8>> = Once::new();
+static ROM: Spinlock<Option<Vec<u8>>> = Spinlock::new(None);
 
 /// The battery-backed cartridge RAM.
 static CART_RAM: Spinlock<Vec<u8>> = Spinlock::new(alloc::vec::Vec::new());
@@ -173,7 +172,7 @@ static CART_RAM_READ_COUNT: core::sync::atomic::AtomicUsize = core::sync::atomic
 /// Read a byte from the ROM file at the offset specified by `addr`.
 /// This is a callback function for the PeanutGB emulator.
 unsafe extern "C" fn gb_rom_read(_gb: *mut c_void, addr: u32) -> u8 {
-    ROM.get().unwrap()[addr as usize]
+    ROM.lock().as_ref().unwrap()[addr as usize]
 }
 
 /// Read a byte from the save RAM at the offset specified by `addr`.
@@ -229,12 +228,29 @@ pub fn play(rom_path: &str) {
     use crate::device::serial::COM3;
 
     let fs = crate::filesystem::tarfs::filesystem();
-    let handle = fs.open(rom_path).expect("Failed to open ROM file");
-    let size = fs.size(handle).expect("Failed to get ROM size");
+    let handle = match fs.open(rom_path) {
+        Ok(h) => h,
+        Err(_) => {
+            println!("Error: Could not open ROM file '{}'", rom_path);
+            return;
+        }
+    };
+    let size = match fs.size(handle) {
+        Ok(s) => s,
+        Err(_) => {
+            println!("Error: Could not get size of ROM file '{}'", rom_path);
+            let _ = fs.close(handle);
+            return;
+        }
+    };
     let mut rom = alloc::vec![0u8; size];
-    fs.read(handle, &mut rom).expect("Failed to read ROM file");
+    if let Err(_) = fs.read(handle, &mut rom) {
+        println!("Error: Could not read ROM file '{}'", rom_path);
+        let _ = fs.close(handle);
+        return;
+    }
     let _ = fs.close(handle);
-    ROM.init(|| rom);
+    *ROM.lock() = Some(rom);
 
     let gb_size = unsafe { gb_size() } as usize;
     let mut gb_struct = Vec::<u8>::with_capacity(gb_size);

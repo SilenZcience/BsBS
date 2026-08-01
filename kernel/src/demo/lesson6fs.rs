@@ -4,9 +4,8 @@ use log::info;
 use crate::device::terminal;
 
 
-pub fn text_file_demo() {
+pub fn text_file_demo(filename: &str) {
     let fs = crate::filesystem::tarfs::filesystem();
-    let filename = "lorem.txt";
     if let Ok(handle) = fs.open(filename) {
         let size = fs.size(handle).unwrap_or(0);
         info!("Opened '{}' ({} bytes)", filename, size);
@@ -23,8 +22,7 @@ pub fn text_file_demo() {
     }
 }
 
-pub fn bitmap_demo() {
-    let bmp_filename = "img/heine.bmp";
+pub fn bitmap_demo(bmp_filename: &str) {
     match crate::library::bitmap::Bitmap::read_from_file(bmp_filename) {
         Ok(Some(bitmap)) => {
             info!("Loaded bitmap: {}x{}", bitmap.width(), bitmap.height());

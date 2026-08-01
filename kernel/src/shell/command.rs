@@ -1,0 +1,104 @@
+use alloc::vec::Vec;
+use crate::device::terminal::terminal;
+use crate::shell::readline::read_line;
+
+pub fn run_shell() -> ! {
+    println!("HeineOS Shell - Type 'help' for commands");
+    loop {
+        print!("User@HeineOS:-$ ");
+        let line = read_line();
+        let line = line.trim();
+
+        if line.is_empty() {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let cmd = parts[0];
+        let args = &parts[1..];
+
+        match cmd {
+            "clear" => cmd_clear(),
+            "uptime" => cmd_uptime(),
+            "help" => cmd_help(),
+            "text" => cmd_text(),
+            "keyboard" => cmd_keyboard(),
+            "heap" => cmd_heap(),
+            "speaker" => cmd_speaker(),
+            "coroutine" => cmd_coroutine(),
+            "thread" => cmd_thread(),
+            "cat" => cmd_textfile(args),
+            "bitmap" => cmd_bitmap(args),
+            "gameboy" => cmd_gameboy(args),
+            _ => {
+                println!("Unknown command: '{}'", cmd);
+                println!("Type 'help' for available commands");
+            }
+        }
+    }
+}
+
+fn cmd_help() {
+    println!("Available commands:");
+    println!("  help        - Show this help message");
+    println!("  clear       - Clear the screen");
+    println!("  uptime      - Show system uptime");
+    println!("  text        - Text formatting demo");
+    println!("  keyboard    - Keyboard event demo");
+    println!("  heap        - Heap allocator demo");
+    println!("  speaker     - PC speaker demo");
+    println!("  coroutine   - Coroutine demo");
+    println!("  thread      - Thread demo");
+    println!("  cat         - Display text file contents (usage: cat [filename])");
+    println!("  bitmap      - Bitmap image demo (usage: bitmap [filename])");
+    println!("  gameboy     - Game Boy emulator (usage: gameboy [rom])");
+}
+
+fn cmd_clear() {
+    terminal().lock().clear();
+}
+
+fn cmd_uptime() {
+    let (hours, minutes, seconds) = crate::device::pit::uptime();
+    println!("Uptime: {:02}:{:02}:{:02}", hours, minutes, seconds);
+}
+
+fn cmd_text() {
+    crate::demo::lesson1::text_demo();
+}
+
+fn cmd_keyboard() {
+    crate::demo::lesson1::keyboard_demo();
+}
+
+fn cmd_heap() {
+    crate::demo::lesson2::heap_demo();
+}
+
+fn cmd_speaker() {
+    crate::demo::lesson2::speaker_demo();
+}
+
+fn cmd_coroutine() {
+    crate::demo::lesson4::coroutine_demo();
+}
+
+fn cmd_thread() {
+    crate::demo::lesson4::thread_demo();
+}
+
+fn cmd_textfile(args: &[&str]) {
+    let filename = args.first().copied().unwrap_or("lorem.txt");
+    crate::demo::lesson6fs::text_file_demo(filename);
+}
+
+fn cmd_bitmap(args: &[&str]) {
+    let filename = args.first().copied().unwrap_or("img/heine.bmp");
+    crate::demo::lesson6fs::bitmap_demo(filename);
+}
+
+fn cmd_gameboy(args: &[&str]) {
+    let rom = args.first().copied().unwrap_or("roms/pokemon.gb");
+    crate::demo::lesson6::peanut_gb::play(rom);
+    cmd_clear();
+}

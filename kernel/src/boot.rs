@@ -37,6 +37,7 @@ mod multiboot;
 mod consts;
 mod demo;
 mod allocator;
+mod shell;
 mod filesystem;
 
 extern crate alloc;
@@ -151,40 +152,7 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     info!("Boot sequence finished");
 
 
-    println!("Demo Menu:");
-    println!("1. Text Demo");
-    println!("2. Keyboard Demo");
-    println!("3. Heap Demo");
-    println!("4. Speaker Demo");
-    println!("5. Coroutine Demo");
-    println!("6. Thread Demo");
-    println!("7. Text File Demo");
-    println!("8. Bitmap Demo");
-    println!("9. Peanut-GB Emulator");
-
-
-    use crate::device::keyboard::keyboard_buffer;
-    loop {
-        let event = keyboard_buffer().poll_key_press();
-        if let Some(c) = event.ascii() {
-            match c {
-                '1' => { crate::demo::lesson1::text_demo(); break; }
-                '2' => { crate::demo::lesson1::keyboard_demo(); break; }
-                '3' => { crate::demo::lesson2::heap_demo(); break; }
-                '4' => { crate::demo::lesson2::speaker_demo(); break; }
-                '5' => { crate::demo::lesson4::coroutine_demo(); break; }
-                '6' => { crate::demo::lesson4::thread_demo(); break; }
-                '7' => { crate::demo::lesson6fs::text_file_demo(); break; }
-                '8' => { crate::demo::lesson6fs::bitmap_demo(); break; }
-                '9' => { crate::demo::lesson6::peanut_gb::play("roms/pokemon.gb"); break; }
-                _ => {}
-            }
-        }
-    }
-
-    info!("Hello from the kernel!");
-    info!("The screen resolution is {}x{}!", framebuffer_info.width as usize, framebuffer_info.height as usize);
-
+    crate::shell::run_shell();
     // Endless loop, as we cannot return from main().
     loop {}
 }
