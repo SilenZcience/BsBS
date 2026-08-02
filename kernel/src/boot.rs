@@ -111,7 +111,8 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Exit UEFI boot services. At this point, the UEFI boot services are still active.
     // By exiting them, the UEFI BIOS frees up resources and hands over full control to the kernel.
     // Furthermore, we get the memory map, which we need to check which memory regions are free to use.
-    let _ = exit_uefi_boot_services(multiboot);
+    let memory_map = exit_uefi_boot_services(multiboot);
+    sysinfo::set_memory_map(memory_map);
 
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }

@@ -42,6 +42,19 @@ impl ListNode {
     }
 }
 
+pub struct HeapStats {
+    /// size of the heap (bytes))
+    pub total: usize,
+    /// size of free memory (bytes)
+    pub free: usize,
+    /// currently used bytes
+    pub used: usize,
+    /// amount of free blocks
+    pub free_blocks: usize,
+    /// largest free block in bytes
+    pub largest_free_block: usize,
+}
+
 /// A linked list allocator that uses a free list to manage memory.
 pub struct LinkedListAllocator {
     head: ListNode,
@@ -164,6 +177,29 @@ impl LinkedListAllocator {
         let size = layout.size().max(size_of::<ListNode>());
 
         (size, layout.align())
+    }
+
+    /// calc stats about the current heap usage by walking the free list
+    pub fn stats(&self) -> HeapStats {
+        let mut free = 0;
+        let mut free_blocks = 0;
+        let mut largest_free_block = 0;
+
+        let mut current = self.head.next.as_ref();
+        while let Some(node) = current {
+            free += node.size;
+            free_blocks += 1;
+            largest_free_block = largest_free_block.max(node.size);
+            current = node.next.as_ref();
+        }
+
+        HeapStats {
+            total: self.heap_end - self.heap_start,
+            free,
+            used: (self.heap_end - self.heap_start).saturating_sub(free),
+            free_blocks,
+            largest_free_block,
+        }
     }
 
     /// Dump the free list for debugging purposes.

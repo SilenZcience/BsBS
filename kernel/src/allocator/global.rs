@@ -18,7 +18,7 @@
 
 use alloc::alloc::Layout;
 // use crate::allocator::bump::BumpAllocator; // NOTE: old bump allocator
-use crate::allocator::list::LinkedListAllocator;
+use crate::allocator::list::{LinkedListAllocator, HeapStats};
 use crate::library::spinlock::{Spinlock, SpinlockGuard};
 
 #[global_allocator]
@@ -61,6 +61,10 @@ pub fn dealloc(ptr: *mut u8, layout: Layout) {
 /// Can be used for debugging the heap allocator.
 pub fn dump_free_list() {
     ALLOCATOR.lock().dump_free_list();
+}
+
+pub fn heap_stats() -> HeapStats {
+    ALLOCATOR.lock().stats()
 }
 
 /// A wrapper around `Spinlock` to allow for trait implementations.
