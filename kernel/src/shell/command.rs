@@ -21,6 +21,7 @@ pub fn run_shell() -> ! {
         match cmd {
             "clear" => cmd_clear(),
             "uptime" => cmd_uptime(),
+            "uname" => cmd_uname(),
             "ps" => cmd_ps(),
             "ls" => cmd_ls(),
             "echo" => cmd_echo(args),
@@ -47,6 +48,7 @@ fn cmd_help() {
     println!("  help        - Show this help message");
     println!("  clear       - Clear the screen");
     println!("  uptime      - Show system uptime");
+    println!("  uname       - Show system information");
     println!("  ps          - Show thread information");
     println!("  ls          - List files in the initrd");
     println!("  echo        - Print text to the terminal (usage: echo [text])");
@@ -68,6 +70,26 @@ fn cmd_clear() {
 fn cmd_uptime() {
     let (hours, minutes, seconds) = crate::device::pit::uptime();
     println!("Uptime: {:02}:{:02}:{:02}", hours, minutes, seconds);
+}
+
+fn cmd_uname() {
+    println!("HeineOS 0.1.0   (x86_64)");
+
+    let bootloader = crate::sysinfo::bootloader_name().unwrap_or("unknown");
+    println!("Bootloader:     {}", bootloader);
+
+    let kernel_start = crate::consts::kernel_start();
+    let kernel_end = crate::consts::kernel_end();
+    println!("Kernel segment: 0x{:x} - 0x{:x} ({})", kernel_start, kernel_end, format_size(kernel_end - kernel_start));
+
+    let heap_start = crate::consts::heap_start();
+    println!("Heap:           0x{:x} - 0x{:x} ({})", heap_start, heap_start + crate::consts::HEAP_SIZE, format_size(crate::consts::HEAP_SIZE));
+
+    let (cols, rows) = crate::device::terminal::terminal().lock().size();
+    println!("Terminal:       {}x{} characters", cols, rows);
+
+    let (hours, minutes, seconds) = crate::device::pit::uptime();
+    println!("Uptime:         {:02}:{:02}:{:02}", hours, minutes, seconds);
 }
 
 fn cmd_ps() {

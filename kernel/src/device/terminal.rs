@@ -92,6 +92,10 @@ impl Terminal {
         self.pos
     }
 
+    pub fn size(&self) -> (usize, usize) {
+        (self.cols, self.rows)
+    }
+
     /// Set the cursor position to the given position.
     /// If the position is out of bounds, it is clamped to the terminal size.
     pub fn set_pos(&mut self, col: usize, row: usize) {

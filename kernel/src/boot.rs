@@ -39,6 +39,7 @@ mod demo;
 mod allocator;
 mod shell;
 mod filesystem;
+mod sysinfo;
 
 extern crate alloc;
 
@@ -116,14 +117,18 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     unsafe { load_gdt(); }
 
     info!("Initializing heap allocator");
-    crate::allocator::global::init_allocator(heap_start(), HEAP_SIZE);
+    allocator::global::init_allocator(heap_start(), HEAP_SIZE);
+
+    if let Some(name_tag) = multiboot.find_tag::<multiboot::BootLoaderNameTag>(multiboot::TagType::BootLoaderName) {
+        sysinfo::set_bootloader_name(name_tag.as_str());
+    }
 
     if let Some(module) = multiboot.find_tag::<multiboot::ModuleTag>(multiboot::TagType::Module) {
         info!("Found module: '{}'", module.name());
         let module_data = module.as_slice();
         let archive = tar_no_std::TarArchiveRef::new(module_data)
             .expect("Failed to parse tar archive");
-        crate::filesystem::tarfs::init_filesystem(archive);
+        filesystem::tarfs::init_filesystem(archive);
         info!("Filesystem initialized");
     } else {
         panic!("No initrd module found");
@@ -133,22 +138,22 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     scheduler();
 
     info!("Initializing interrupt dispatcher");
-    crate::interrupt::dispatcher::init_interrupt_dispatcher();
+    interrupt::dispatcher::init_interrupt_dispatcher();
 
     info!("Initializing IDT");
-    crate::interrupt::idt::idt().load();
+    interrupt::idt::idt().load();
 
     info!("Initializing PIC");
-    crate::device::pic::PIC.lock().init();
+    device::pic::PIC.lock().init();
 
     info!("Initializing keyboard");
-    crate::device::keyboard::plugin();
+    device::keyboard::plugin();
 
     info!("Initializing PIT");
-    crate::device::pit::plugin();
+    device::pit::plugin();
 
     info!("Enabling interrupts");
-    crate::device::cpu::enable_int();
+    device::cpu::enable_int();
 
     info!("Boot sequence finished");
 
@@ -164,7 +169,7 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
 
 /// Entry function of the shell thread.
 fn shell_main() {
-    crate::shell::run_shell();
+    shell::run_shell();
 }
 
 /// Exit UEFI boot services.
