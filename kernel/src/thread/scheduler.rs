@@ -76,6 +76,16 @@ impl Scheduler {
         state.active_thread.as_ref().unwrap().id()
     }
 
+    pub fn thread_stats(&self) -> (usize, usize, usize) {
+        let state = self.state.lock();
+
+        (
+            state.active_thread.as_ref().unwrap().id(),
+            state.ready_queue.len(),
+            state.terminated_threads.len()
+        )
+    }
+
     /// Start the scheduler.
     /// This function must only be called once.
     pub fn schedule(&self) {
