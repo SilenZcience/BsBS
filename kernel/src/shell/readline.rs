@@ -5,6 +5,7 @@ use crate::device::keyboard::keyboard_buffer;
 use crate::device::terminal::terminal;
 use crate::library::once::Once;
 use crate::library::spinlock::Spinlock;
+use crate::thread::scheduler::scheduler;
 
 const MAX_HISTORY: usize = 64;
 
@@ -74,7 +75,16 @@ fn history_down(buf: &mut String) {
 pub fn read_line() -> String {
     let mut buf = String::new();
     loop {
-        let event = keyboard_buffer().poll_key_press();
+        // no busy-spinning.
+        let event = loop {
+            if let Some(key) = keyboard_buffer().pop_key_event() {
+                if key.pressed() {
+                    break key;
+                }
+            } else {
+                scheduler().yield_cpu();
+            }
+        };
 
         if let Some(c) = event.ascii() {
             match c {
