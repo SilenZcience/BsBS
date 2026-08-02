@@ -44,6 +44,7 @@ extern crate alloc;
 
 use crate::consts::{heap_start, HEAP_SIZE};
 use crate::thread::scheduler::scheduler;
+use crate::thread::thread::Thread;
 
 unsafe extern "C" {
     fn load_gdt();
@@ -151,10 +152,19 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
 
     info!("Boot sequence finished");
 
+    // run the shell as a thread
+    let shell_thread = Thread::new(shell_main);
+    scheduler().ready(shell_thread);
 
-    crate::shell::run_shell();
+    scheduler().schedule();
+
     // Endless loop, as we cannot return from main().
     loop {}
+}
+
+/// Entry function of the shell thread.
+fn shell_main() {
+    crate::shell::run_shell();
 }
 
 /// Exit UEFI boot services.

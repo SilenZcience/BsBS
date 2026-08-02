@@ -16,7 +16,13 @@ use crate::thread::thread::Thread;
 /// A demo function showcasing coroutines.
 /// It starts three coroutines, each incrementing a counter and printing it to the terminal in an endless loop.
 /// The coroutines switch to the next coroutine after each print.
+/// the coroutines run on their own thread...
 pub fn coroutine_demo() {
+    let thread = Thread::new(coroutine_demo_loop);
+    scheduler().ready(thread);
+}
+
+fn coroutine_demo_loop() {
     let mut c1 = Coroutine::new(coroutine_loop);
     let mut c2 = Coroutine::new(coroutine_loop);
     let mut c3 = Coroutine::new(coroutine_loop);
@@ -54,8 +60,6 @@ fn coroutine_loop(coroutine: &mut Coroutine) {
 /// It starts three counter threads and one speaker thread.
 /// The PIT drives thread switching every 10ms.
 pub fn thread_demo() {
-    // Initialize scheduler first, so the idle thread takes ID 0
-    // Edit: not neccesseray anymore, since first ini in boot.rs
     let sched = scheduler();
 
     for _ in 0..5 {
@@ -68,7 +72,6 @@ pub fn thread_demo() {
     // info!("Started speaker thread with ID={}", speaker.id());
     // sched.ready(speaker);
 
-    sched.schedule();
 }
 
 /// The function executed by each counter thread.
