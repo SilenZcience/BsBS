@@ -131,6 +131,7 @@ Cargo.lock
 *.dump
 *.fd
 *.elf
-*.sav
+gameboy.sav
 *.tar
 towbootctl
+tar-no-std-patch/
