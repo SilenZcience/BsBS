@@ -19,6 +19,7 @@ use crate::thread::thread::Thread;
 /// the coroutines run on their own thread...
 pub fn coroutine_demo() {
     let thread = Thread::new(coroutine_demo_loop);
+    info!("Started thread with ID={}", thread.id());
     scheduler().ready(thread);
 }
 
@@ -43,7 +44,12 @@ fn coroutine_demo_loop() {
 /// switching to the next coroutine after each print.
 fn coroutine_loop(coroutine: &mut Coroutine) {
     let mut counter = 0usize;
+    let start_time = pit::system_time();
     loop {
+        if pit::system_time() - start_time >= 5000 {
+            scheduler().exit();
+        }
+
         let mut term = terminal().lock();
         term.set_pos(10, 10 + coroutine.id());
         print_terminal!(&mut term, "Coroutine [{}]: {}", coroutine.id(), counter);
