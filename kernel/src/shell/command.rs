@@ -1,3 +1,4 @@
+use alloc::string::String;
 use alloc::vec::Vec;
 use crate::device::terminal::terminal;
 use crate::shell::readline::read_line;
@@ -20,6 +21,7 @@ pub fn run_shell() -> ! {
         match cmd {
             "clear" => cmd_clear(),
             "uptime" => cmd_uptime(),
+            "ls" => cmd_ls(),
             "echo" => cmd_echo(args),
             "help" => cmd_help(),
             "text" => cmd_text(),
@@ -44,6 +46,7 @@ fn cmd_help() {
     println!("  help        - Show this help message");
     println!("  clear       - Clear the screen");
     println!("  uptime      - Show system uptime");
+    println!("  ls          - List files in the initrd");
     println!("  echo        - Print text to the terminal (usage: echo [text])");
     println!("  text        - Text formatting demo");
     println!("  keyboard    - Keyboard event demo");
@@ -63,6 +66,23 @@ fn cmd_clear() {
 fn cmd_uptime() {
     let (hours, minutes, seconds) = crate::device::pit::uptime();
     println!("Uptime: {:02}:{:02}:{:02}", hours, minutes, seconds);
+}
+
+fn cmd_ls() {
+    let files = crate::filesystem::tarfs::filesystem().list_files();
+
+    if files.is_empty() {
+        println!("(initrd is empty)");
+        return;
+    }
+
+    for (name, size) in &files {
+        println!("  {:<40} {:>10} B {:>13}", name, size, format_size(*size));
+    }
+
+    let total: usize = files.iter().map(|(_, size)| size).sum();
+    println!("");
+    println!("{} file(s), total {}", files.len(), format_size(total));
 }
 
 fn cmd_echo(args: &[&str]) {
@@ -113,4 +133,28 @@ fn cmd_gameboy(args: &[&str]) {
     let rom = args.first().copied().unwrap_or("roms/pokemon.gb");
     crate::demo::lesson6::peanut_gb::play(rom);
     cmd_clear();
+}
+
+fn format_size(size_bytes: usize) -> String {
+    const SIZE_NAME: [&str; 9] = [" B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+    if size_bytes == 0 {
+        return String::from("0  B");
+    }
+
+    let mut i = 0;
+    let mut power = 1usize;
+    while power <= size_bytes / 1024 && i < SIZE_NAME.len() - 1 {
+        power *= 1024;
+        i += 1;
+    }
+
+    let whole = size_bytes / power;
+    let hundredths = ((size_bytes % power) as u128 * 100 + (power / 2) as u128) / power as u128;
+
+    if hundredths == 100 {
+        alloc::format!("{} {}", whole + 1, SIZE_NAME[i])
+    } else {
+        alloc::format!("{}.{:02} {}", whole, hundredths, SIZE_NAME[i])
+    }
 }

@@ -6,6 +6,8 @@
  */
 
 use alloc::collections::BTreeMap;
+use alloc::string::String;
+use alloc::vec::Vec;
 use core::cmp::min;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use tar_no_std::{ArchiveEntry, TarArchiveRef};
@@ -178,5 +180,19 @@ impl TarFs {
     pub fn close(&self, handle: FileHandle) -> Result<(), FsError> {
         self.open_handles.lock().remove(&handle).ok_or(FsError::InvalidHandle)?;
         Ok(())
+    }
+
+    /// list all files in initrd
+    pub fn list_files(&self) -> Vec<(String, usize)> {
+        let mut files = Vec::new();
+
+        for entry in self.archive.entries() {
+            if let Ok(name) = entry.filename().as_str() {
+                let stripped = name.strip_prefix("./").unwrap_or(name);
+                files.push((String::from(stripped), entry.data().len()));
+            }
+        }
+
+        files
     }
 }
