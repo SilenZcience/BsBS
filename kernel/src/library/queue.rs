@@ -63,6 +63,16 @@ impl<T> LinkedQueue<T> {
         }
     }
 
+    pub fn len(&self) -> usize {
+        let mut count = 0;
+        let mut node = self.head.as_ref();
+        while let Some(current) = node {
+            count += 1;
+            node = current.next.as_ref();
+        }
+        count
+    }
+
     /// Remove the first element that matches the given predicate.
     /// Returns true if an element was removed, false otherwise.
     /// `f` is a function that takes a reference to the data and returns true if it matches.
