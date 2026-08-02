@@ -20,6 +20,7 @@ pub fn run_shell() -> ! {
         match cmd {
             "clear" => cmd_clear(),
             "uptime" => cmd_uptime(),
+            "echo" => cmd_echo(args),
             "help" => cmd_help(),
             "text" => cmd_text(),
             "keyboard" => cmd_keyboard(),
@@ -43,6 +44,7 @@ fn cmd_help() {
     println!("  help        - Show this help message");
     println!("  clear       - Clear the screen");
     println!("  uptime      - Show system uptime");
+    println!("  echo        - Print text to the terminal (usage: echo [text])");
     println!("  text        - Text formatting demo");
     println!("  keyboard    - Keyboard event demo");
     println!("  heap        - Heap allocator demo");
@@ -61,6 +63,16 @@ fn cmd_clear() {
 fn cmd_uptime() {
     let (hours, minutes, seconds) = crate::device::pit::uptime();
     println!("Uptime: {:02}:{:02}:{:02}", hours, minutes, seconds);
+}
+
+fn cmd_echo(args: &[&str]) {
+    for (i, arg) in args.iter().enumerate() {
+        if i > 0 {
+            print!(" ");
+        }
+        print!("{}", arg);
+    }
+    println!("");
 }
 
 fn cmd_text() {
