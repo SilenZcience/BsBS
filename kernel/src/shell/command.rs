@@ -1,12 +1,12 @@
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::device::terminal::terminal;
+use crate::device::terminal::{terminal, PROMPT_COLOR};
 use crate::shell::readline::read_line;
 
 pub fn run_shell() -> ! {
     println!("HeineOS Shell - Type 'help' for commands");
     loop {
-        print!("User@HeineOS:-$ ");
+        print_colored!("User@HeineOS:-$ ", PROMPT_COLOR);
         let line = read_line();
         let line = line.trim();
 

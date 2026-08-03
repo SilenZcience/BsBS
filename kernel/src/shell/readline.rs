@@ -2,7 +2,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use crate::device::key::Scancode;
 use crate::device::keyboard::keyboard_buffer;
-use crate::device::terminal::terminal;
+use crate::device::terminal::{terminal, DEFAULT_BG_COLOR, INPUT_COLOR};
 use crate::library::once::Once;
 use crate::library::spinlock::Spinlock;
 use crate::thread::scheduler::scheduler;
@@ -46,7 +46,7 @@ fn history_up(buf: &mut String) {
     }
     *buf = hist.entries[hist.index].clone();
     for c in buf.chars() {
-        term.put_char(c);
+        term.put_char_colored(c, INPUT_COLOR, DEFAULT_BG_COLOR);
     }
 }
 
@@ -68,7 +68,7 @@ fn history_down(buf: &mut String) {
         *buf = hist.entries[hist.index].clone();
     }
     for c in buf.chars() {
-        term.put_char(c);
+        term.put_char_colored(c, INPUT_COLOR, DEFAULT_BG_COLOR);
     }
 }
 
@@ -110,7 +110,9 @@ pub fn read_line() -> String {
                 }
                 c if c.is_ascii_graphic() || c == ' ' => {
                     buf.push(c);
-                    print!("{}", c);
+                    let mut buf4 = [0u8; 4];
+                    let s = c.encode_utf8(&mut buf4);
+                    print_colored!(s, INPUT_COLOR);
                 }
                 _ => {}
             }

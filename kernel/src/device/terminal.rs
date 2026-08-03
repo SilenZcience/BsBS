@@ -43,9 +43,13 @@ pub fn framebuffer() -> &'static Spinlock<Framebuffer> {
 }
 
 /// Default text foreground color.
-const DEFAULT_FG_COLOR: u32 = framebuffer::MAGENTA;
+pub const DEFAULT_FG_COLOR: u32 = framebuffer::MAGENTA;
 /// Default text background color.
-const DEFAULT_BG_COLOR: u32 = framebuffer::BLACK;
+pub const DEFAULT_BG_COLOR: u32 = framebuffer::BLACK;
+/// Foreground color used for the shell prompt.
+pub const PROMPT_COLOR: u32 = framebuffer::GREEN;
+// Foregrpund color used for the shell input.
+pub const INPUT_COLOR:  u32 = framebuffer::CYAN;
 
 /// A simple terminal driver for text output on a framebuffer.
 /// It supports basic character output and a static cursor.
@@ -168,6 +172,15 @@ impl Terminal {
         self.pos = (col, row);
     }
 
+    /// Write a string to the terminal with the given foreground and/or background color.
+    pub fn write_str_colored(&mut self, s: &str, fg_color: Option<u32>, bg_color: Option<u32>) {
+        let fg_color = fg_color.unwrap_or(DEFAULT_FG_COLOR);
+        let bg_color = bg_color.unwrap_or(DEFAULT_BG_COLOR);
+        for c in s.chars() {
+            self.put_char_colored(c, fg_color, bg_color);
+        }
+    }
+
     /// Draw the cursor at the given position by drawing a white space character in the default foreground color.
     fn draw_cursor(pos: (usize, usize), framebuffer: &mut Framebuffer) {
         let x = pos.0 * framebuffer::CHAR_WIDTH;
@@ -241,4 +254,26 @@ macro_rules! println_terminal {
 /// Helper function for the print macros.
 pub fn print(terminal: &mut Terminal, args: fmt::Arguments) {
     terminal.write_fmt(args).expect("Failed to write to terminal");
+}
+
+#[macro_export]
+/// Print a string to the terminal with an optional foreground and/or background color.
+/// This macro locks the terminal instance, writes the string to it, and unlocks it again.
+macro_rules! print_colored {
+    ($s:expr, None, $bg:expr) => ({
+        let mut terminal = $crate::device::terminal::terminal().lock();
+        terminal.write_str_colored($s, None, Some($bg));
+    });
+    ($s:expr, $fg:expr, $bg:expr) => ({
+        let mut terminal = $crate::device::terminal::terminal().lock();
+        terminal.write_str_colored($s, Some($fg), Some($bg));
+    });
+    ($s:expr, $fg:expr) => ({
+        let mut terminal = $crate::device::terminal::terminal().lock();
+        terminal.write_str_colored($s, Some($fg), None);
+    });
+    ($s:expr) => ({
+        let mut terminal = $crate::device::terminal::terminal().lock();
+        terminal.write_str_colored($s, None, None);
+    });
 }
