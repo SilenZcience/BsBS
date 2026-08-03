@@ -81,80 +81,25 @@ fn cmd_uptime() {
 }
 
 fn cmd_uname() {
-    terminal().lock().clear();
-
-    let x_pos = 54;
-    let mut y_pos = 2;
-
-    println!("User@HeineOS:-$ heinefetch");
-    println!(" ");
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
-    println!("User@HeineOS");
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
-    println!("------------");
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
-    println!("OS:         HeineOS 0.1.0 (x86_64)");
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
     let bootloader = crate::sysinfo::bootloader_name().unwrap_or("unknown");
-    println!("Bootloader: {}", bootloader);
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
     let (hours, minutes, seconds) = crate::device::pit::uptime();
-    println!("Uptime:     {:02}h {:02}m {:02}s", hours, minutes, seconds);
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
-    println!("Shell:      HeineOS Shell v0.1.0");
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
     let (fb_w, fb_h) = {
         let fb = crate::device::terminal::framebuffer().lock();
         (fb.width(), fb.height())
     };
-    println!("Resolution: {}x{}", fb_w, fb_h);
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
     let (cols, rows) = terminal().lock().size();
-    println!("Terminal:   {}x{} characters", cols, rows);
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
-    println!("Vendor:     {}", cpu_vendor());
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    y_pos += 1;
-    println!("CPU:        {}", cpu_brand());
-
-    terminal().lock().set_pos(x_pos, y_pos);
-    // y_pos += 1;
     let stats = crate::allocator::global::heap_stats();
-    println!("Memory:     {} / {}", format_size(stats.used), format_size(stats.total));
-
-    // cmd_bitmap(&["img/hhu.bmp", "0", "25"]);
-    // terminal().lock().set_pos(0, 27);
-    terminal().lock().set_pos(0, 2);
-    println!("                   *** ### ### ***");
-    println!("               *##                 ##*");
-    println!("           *##                         ##*");
-    println!("        *##                               ##*");
-    println!("      *##                                   ##*");
-    println!("    *##                                       ##*");
-    println!("   *##                                         ##*");
-    println!("  *##                                           ##*");
-    println!(" *##         @@      @@                          ##*");
-    println!(" *##         @@      @@                          ##*");
-    println!(" *##         @@      @@                          ##*");
+    println!("                   *** ### ### ***                    User@HeineOS");
+    println!("               *##                 ##*                ------------");
+    println!("           *##                         ##*            OS:         HeineOS 0.1.0 (x86_64)");
+    println!("        *##                               ##*         Bootloader: {}", bootloader);
+    println!("      *##                                   ##*       Uptime:     {:02}h {:02}m {:02}s", hours, minutes, seconds);
+    println!("    *##                                       ##*     Shell:      HeineOS Shell v0.1.0");
+    println!("   *##                                         ##*    Resolution: {}x{}", fb_w, fb_h);
+    println!("  *##                                           ##*   Terminal:   {}x{} characters", cols, rows);
+    println!(" *##         @@      @@                          ##*  Vendor:     {}", cpu_vendor());
+    println!(" *##         @@      @@                          ##*  CPU:        {}", cpu_brand());
+    println!(" *##         @@      @@                          ##*  Memory:     {} / {}", format_size(stats.used), format_size(stats.total));
     println!(" *##         @@@@@@  @@@@@@  @@  @@              ##*");
     println!(" *##         @@  @@  @@  @@  @@  @@              ##*");
     println!(" *##         @@  @@  @@  @@  @@  @@              ##*");
@@ -163,7 +108,7 @@ fn cmd_uname() {
     println!("   *##                                         ##*");
     println!("    *##                                       ##*");
     println!("      *##                                   ##*");
-    println!("        *#                                ##*");
+    println!("        *##                               ##*");
     println!("           *##                         ##*");
     println!("               *##                 ##*");
     println!("                   *** ### ### ***");
