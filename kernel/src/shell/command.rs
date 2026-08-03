@@ -36,6 +36,8 @@ pub fn run_shell() -> ! {
             "cat" => cmd_textfile(args),
             "bitmap" => cmd_bitmap(args),
             "gameboy" => cmd_gameboy(args),
+            "reboot" => cmd_reboot(),
+            "shutdown" => cmd_shutdown(),
             _ => {
                 println!("Unknown command: '{}'", cmd);
                 println!("Type 'help' for available commands");
@@ -63,6 +65,8 @@ fn cmd_help() {
     println!("  cat         - Display text file contents (usage: cat [filename])");
     println!("  bitmap      - Bitmap image demo (usage: bitmap [filename] [x] [y])");
     println!("  gameboy     - Game Boy emulator (usage: gameboy [rom])");
+    println!("  reboot      - Reboot the system");
+    println!("  shutdown    - Power off the system");
 }
 
 fn cmd_clear() {
@@ -267,6 +271,14 @@ fn cmd_gameboy(args: &[&str]) {
     let rom = args.first().copied().unwrap_or("roms/pokemon.gb");
     crate::demo::lesson6::peanut_gb::play(rom);
     cmd_clear();
+}
+
+fn cmd_reboot() {
+    uefi::runtime::reset(uefi::runtime::ResetType::COLD, uefi::Status::SUCCESS, None);
+}
+
+fn cmd_shutdown() {
+    uefi::runtime::reset(uefi::runtime::ResetType::SHUTDOWN, uefi::Status::SUCCESS, None);
 }
 
 fn format_size(size_bytes: usize) -> String {
