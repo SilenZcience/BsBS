@@ -112,6 +112,31 @@ pub fn io_wait() {
     }
 }
 
+/// !!! cannot use register `bx`: rbx is used internally by LLVM and cannot be used as an operand for inline asm
+/// so the CPUID result is captured through `r8` while `rbx` is saved and restored
+#[inline]
+pub fn cpuid(leaf: u32) -> (u32, u32, u32, u32) {
+    let mut eax = leaf as u64;
+    let mut ebx: u64;
+    let mut ecx: u64;
+    let mut edx: u64;
+
+    unsafe {
+        asm!(
+        "push rbx",
+        "cpuid",
+        "mov r8, rbx",
+        "pop rbx",
+        inout("rax") eax,
+          out("r8" ) ebx,
+          out("rcx") ecx,
+          out("rdx") edx,
+        );
+    }
+
+    (eax as u32, ebx as u32, ecx as u32, edx as u32)
+}
+
 /// Check if IE bit is set in RFLAGS
 #[inline]
 pub fn is_int_enabled() -> bool {
