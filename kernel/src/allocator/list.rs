@@ -176,6 +176,10 @@ impl LinkedListAllocator {
             .pad_to_align();
         let size = layout.size().max(size_of::<ListNode>());
 
+        // Round the size up to a multiple of the `ListNode` size
+        // reduces risk of memory getting lost in limbo
+        let size = size.div_ceil(size_of::<ListNode>()) * size_of::<ListNode>();
+
         (size, layout.align())
     }
 
