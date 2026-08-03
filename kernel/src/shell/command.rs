@@ -21,7 +21,7 @@ pub fn run_shell() -> ! {
         match cmd {
             "clear" => cmd_clear(),
             "uptime" => cmd_uptime(),
-            "uname" => cmd_uname(),
+            "heinefetch" => cmd_uname(),
             "meminfo" => cmd_meminfo(),
             "ps" => cmd_ps(),
             "ls" => cmd_ls(),
@@ -49,7 +49,7 @@ fn cmd_help() {
     println!("  help        - Show this help message");
     println!("  clear       - Clear the screen");
     println!("  uptime      - Show system uptime");
-    println!("  uname       - Show system information");
+    println!("  heinefetch  - Show system information");
     println!("  meminfo     - Show memory information");
     println!("  ps          - Show thread information");
     println!("  ls          - List files in the initrd");
@@ -61,7 +61,7 @@ fn cmd_help() {
     println!("  coroutine   - Coroutine demo");
     println!("  thread      - Thread demo");
     println!("  cat         - Display text file contents (usage: cat [filename])");
-    println!("  bitmap      - Bitmap image demo (usage: bitmap [filename])");
+    println!("  bitmap      - Bitmap image demo (usage: bitmap [filename] [x] [y])");
     println!("  gameboy     - Game Boy emulator (usage: gameboy [rom])");
 }
 
@@ -75,23 +75,85 @@ fn cmd_uptime() {
 }
 
 fn cmd_uname() {
-    println!("HeineOS 0.1.0   (x86_64)");
+    terminal().lock().clear();
 
+    let x_pos = 54;
+    let mut y_pos = 2;
+
+    println!("User@HeineOS:-$ heinefetch");
+    println!(" ");
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    println!("User@HeineOS");
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    println!("------------");
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    println!("OS:         HeineOS 0.1.0 (x86_64)");
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
     let bootloader = crate::sysinfo::bootloader_name().unwrap_or("unknown");
-    println!("Bootloader:     {}", bootloader);
+    println!("Bootloader: {}", bootloader);
 
-    let kernel_start = crate::consts::kernel_start();
-    let kernel_end = crate::consts::kernel_end();
-    println!("Kernel segment: 0x{:x} - 0x{:x} ({})", kernel_start, kernel_end, format_size(kernel_end - kernel_start));
-
-    let heap_start = crate::consts::heap_start();
-    println!("Heap:           0x{:x} - 0x{:x} ({})", heap_start, heap_start + crate::consts::HEAP_SIZE, format_size(crate::consts::HEAP_SIZE));
-
-    let (cols, rows) = crate::device::terminal::terminal().lock().size();
-    println!("Terminal:       {}x{} characters", cols, rows);
-
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
     let (hours, minutes, seconds) = crate::device::pit::uptime();
-    println!("Uptime:         {:02}:{:02}:{:02}", hours, minutes, seconds);
+    println!("Uptime:     {:02}h {:02}m {:02}s", hours, minutes, seconds);
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    println!("Shell:      HeineOS Shell v0.1.0");
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    let (fb_w, fb_h) = {
+        let fb = crate::device::terminal::framebuffer().lock();
+        (fb.width(), fb.height())
+    };
+    println!("Resolution: {}x{}", fb_w, fb_h);
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    let (cols, rows) = terminal().lock().size();
+    println!("Terminal:   {}x{} characters", cols, rows);
+
+    terminal().lock().set_pos(x_pos, y_pos);
+    y_pos += 1;
+    let stats = crate::allocator::global::heap_stats();
+    println!("Memory:     {} / {}", format_size(stats.used), format_size(stats.total));
+
+    // cmd_bitmap(&["img/hhu.bmp", "0", "25"]);
+    // terminal().lock().set_pos(0, 27);
+    terminal().lock().set_pos(0, 2);
+    println!("                   *** ### ### ***");
+    println!("               *##                 ##*");
+    println!("           *##                         ##*");
+    println!("        *##                               ##*");
+    println!("      *##                                   ##*");
+    println!("    *##                                       ##*");
+    println!("   *##                                         ##*");
+    println!("  *##                                           ##*");
+    println!(" *##         @@      @@                          ##*");
+    println!(" *##         @@      @@                          ##*");
+    println!(" *##         @@      @@                          ##*");
+    println!(" *##         @@@@@@  @@@@@@  @@  @@              ##*");
+    println!(" *##         @@  @@  @@  @@  @@  @@              ##*");
+    println!(" *##         @@  @@  @@  @@  @@  @@              ##*");
+    println!(" *##         @@  @@  @@  @@  @@@@@@  @@@         ##*");
+    println!("  *##                                @@@        ##*");
+    println!("   *##                                         ##*");
+    println!("    *##                                       ##*");
+    println!("      *##                                   ##*");
+    println!("        *#                                ##*");
+    println!("           *##                         ##*");
+    println!("               *##                 ##*");
+    println!("                   *** ### ### ***");
+    println!("");
 }
 
 fn cmd_meminfo() {
@@ -196,7 +258,9 @@ fn cmd_textfile(args: &[&str]) {
 
 fn cmd_bitmap(args: &[&str]) {
     let filename = args.first().copied().unwrap_or("img/heine.bmp");
-    crate::demo::lesson6fs::bitmap_demo(filename);
+    let x = args.get(1).and_then(|s| s.parse::<usize>().ok());
+    let y = args.get(2).and_then(|s| s.parse::<usize>().ok());
+    crate::demo::lesson6fs::bitmap_demo(filename, x, y);
 }
 
 fn cmd_gameboy(args: &[&str]) {

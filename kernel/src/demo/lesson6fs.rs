@@ -22,13 +22,13 @@ pub fn text_file_demo(filename: &str) {
     }
 }
 
-pub fn bitmap_demo(bmp_filename: &str) {
+pub fn bitmap_demo(bmp_filename: &str, x_pos: Option<usize>, y_pos: Option<usize>) {
     match crate::library::bitmap::Bitmap::read_from_file(bmp_filename) {
         Ok(Some(bitmap)) => {
             info!("Loaded bitmap: {}x{}", bitmap.width(), bitmap.height());
             let mut fb = terminal::framebuffer().lock();
-            let x = (fb.width() - bitmap.width() as usize) / 2;
-            let y = (fb.height() - bitmap.height() as usize) / 2;
+            let x = x_pos.unwrap_or_else(|| (fb.width() - bitmap.width() as usize) / 2);
+            let y = y_pos.unwrap_or_else(|| (fb.height() - bitmap.height() as usize) / 2);
             fb.draw_bitmap(&bitmap, x, y);
         }
         Ok(None) => {
