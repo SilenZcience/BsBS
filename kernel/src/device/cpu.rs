@@ -8,6 +8,8 @@
 
 use core::arch::asm;
 
+use alloc::string::String;
+
 /// Represents an I/O-port for reading and writing data.
 pub struct IoPort {
     port: u16
@@ -215,4 +217,36 @@ where F: FnOnce() -> R{
 
     enable_int_nested(ie);
     ret
+}
+
+/// Read the CPU vendor string (e.g. "GenuineIntel" or "AuthenticAMD").
+pub fn vendor() -> String {
+    let (_, ebx, ecx, edx) = cpuid(0);
+    let mut vendor = String::new();
+    vendor.push_str(core::str::from_utf8(&ebx.to_le_bytes()).unwrap_or("?"));
+    vendor.push_str(core::str::from_utf8(&edx.to_le_bytes()).unwrap_or("?"));
+    vendor.push_str(core::str::from_utf8(&ecx.to_le_bytes()).unwrap_or("?"));
+    vendor
+}
+
+/// Read the CPU brand/model name string.
+pub fn brand() -> String {
+    let (max_ext, _, _, _) = cpuid(0x8000_0000);
+    if max_ext < 0x8000_0004 {
+        return String::from("unknown");
+    }
+
+    let mut brand = String::new();
+    for leaf in 0x8000_0002..=0x8000_0004 {
+        let (a, b, c, d) = cpuid(leaf);
+        for reg in [a, b, c, d] {
+            for byte in reg.to_le_bytes() {
+                if byte == 0 {
+                    return String::from(brand.trim());
+                }
+                brand.push(byte as char);
+            }
+        }
+    }
+    String::from(brand.trim())
 }

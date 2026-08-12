@@ -1,0 +1,43 @@
+mod bitmap;
+mod cat;
+mod clear;
+mod coroutine;
+mod cpuinfo;
+mod echo;
+mod gameboy;
+mod heap;
+mod heinefetch;
+mod help;
+mod keyboard;
+mod ls;
+mod meminfo;
+mod ps;
+mod reboot;
+mod shutdown;
+mod speaker;
+mod text;
+mod thread;
+mod uptime;
+
+pub fn register_all() {
+    help::register();
+    clear::register();
+    uptime::register();
+    heinefetch::register();
+    meminfo::register();
+    cpuinfo::register();
+    ps::register();
+    ls::register();
+    echo::register();
+    text::register();
+    keyboard::register();
+    heap::register();
+    speaker::register();
+    coroutine::register();
+    thread::register();
+    cat::register();
+    bitmap::register();
+    gameboy::register();
+    reboot::register();
+    shutdown::register();
+}
