@@ -7,10 +7,14 @@
  */
 
 use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::mem::size_of;
+use log::info;
 use crate::device::key::Scancode;
 use crate::device::speaker;
+use crate::thread::scheduler::scheduler;
+use crate::thread::thread::Thread;
 
 /// A simple heap demo, allocating and freeing memory on the heap.
 pub fn heap_demo() {
@@ -241,11 +245,27 @@ fn wait_for_enter() {
 }
 
 /// A demo that plays songs via the PC speaker.
-pub fn speaker_demo() {
+pub fn speaker_demo(args: &[String]) {
+    let song = args.first().map(String::as_str).unwrap_or("tetris");
 
+    let entry = match song {
+        "aerodynamic" => play_aerodynamic,
+        _ => play_tetris,
+    };
+
+    let thread = Thread::new(entry);
+    info!("Started speaker thread with ID={}", thread.id());
+    scheduler().ready(thread);
+}
+
+fn play_tetris() {
     println!("Speaker Demo: Playing Tetris theme...");
-
     speaker::tetris();
+    println!("Finished!");
+}
 
+fn play_aerodynamic() {
+    println!("Speaker Demo: Playing Aerodynamic...");
+    speaker::aerodynamic();
     println!("Finished!");
 }
