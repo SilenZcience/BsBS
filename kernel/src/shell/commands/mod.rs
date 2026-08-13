@@ -12,7 +12,7 @@ mod keyboard;
 mod kill;
 mod ls;
 mod meminfo;
-mod ps;
+mod ts;
 mod reboot;
 mod shutdown;
 mod speaker;
@@ -27,7 +27,7 @@ pub fn register_all() {
     heinefetch::register();
     meminfo::register();
     cpuinfo::register();
-    ps::register();
+    ts::register();
     kill::register();
     ls::register();
     echo::register();

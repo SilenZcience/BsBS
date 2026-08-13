@@ -2,7 +2,7 @@ use alloc::string::{String, ToString};
 use crate::shell::registry;
 
 pub fn register() {
-    registry::register("ps", "Show thread information", run);
+    registry::register("ts", "Show thread snapshot information", run);
 }
 
 fn run(_args: &[String]) {
