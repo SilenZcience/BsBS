@@ -73,19 +73,28 @@ impl<T> LinkedQueue<T> {
         count
     }
 
+    pub fn for_each(&self, mut f: impl FnMut(&T)) {
+        let mut node = self.head.as_ref();
+        while let Some(current) = node {
+            f(&current.data);
+            node = current.next.as_ref();
+        }
+    }
+
     /// Remove the first element that matches the given predicate.
-    /// Returns true if an element was removed, false otherwise.
+    /// Returns the removed element, or None if no element matched.
     /// `f` is a function that takes a reference to the data and returns true if it matches.
-    pub fn remove<F>(&mut self, f: F) -> bool
+    pub fn remove<F>(&mut self, f: F) -> Option<T>
     where F: Fn(&T) -> bool
     {
         if self.head.is_none() { // empty queue
-            return false;
+            return None;
         }
 
         if f(&self.head.as_ref().unwrap().data) { // head matches
-            self.head = self.head.as_mut().unwrap().next.take();
-            return true;
+            let removed = self.head.take().unwrap();
+            self.head = removed.next;
+            return Some(removed.data);
         }
 
         let mut current = &mut self.head;
@@ -93,13 +102,13 @@ impl<T> LinkedQueue<T> {
             if node.next.is_some() && f(&node.next.as_ref().unwrap().data) {
                 let mut removed = node.next.take().unwrap();
                 node.next = removed.next.take();
-                return true;
+                return Some(removed.data);
             }
 
             current = &mut node.next;
         }
 
-        false
+        None
     }
 }
 

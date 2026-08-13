@@ -8,6 +8,7 @@
  */
 
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::fmt::Display;
 use core::{fmt, ptr};
 use log::debug;
@@ -83,6 +84,23 @@ impl Scheduler {
             state.active_thread.as_ref().unwrap().id(),
             state.ready_queue.len(),
             state.terminated_threads.len()
+        )
+    }
+
+    /// Get the IDs of all threads in the system
+    pub fn thread_ids(&self) -> (usize, Vec<usize>, Vec<usize>) {
+        let state = self.state.lock();
+
+        let mut ready_ids = Vec::new();
+        state.ready_queue.for_each(|thread| ready_ids.push(thread.id()));
+
+        let mut terminated_ids = Vec::new();
+        state.terminated_threads.for_each(|thread| terminated_ids.push(thread.id()));
+
+        (
+            state.active_thread.as_ref().unwrap().id(),
+            ready_ids,
+            terminated_ids
         )
     }
 
@@ -174,12 +192,20 @@ impl Scheduler {
     }
 
     /// Kill the thread with the given ID by removing it from the ready queue.
-    pub fn kill(&self, to_kill_id: usize) {
+    /// Returns true if a thread was removed, false otherwise.
+    pub fn kill(&self, to_kill_id: usize) -> bool {
         debug!("Killing thread with ID={}", to_kill_id);
 
         let mut state = self.state.lock();
 
-        state.ready_queue.remove(|thread| thread.id() == to_kill_id);
+        match state.ready_queue.remove(|thread| thread.id() == to_kill_id) {
+            Some(mut thread) => {
+                // invoke cleanup handler
+                thread.run_kill_handler();
+                true
+            }
+            None => false
+        }
     }
 }
 

@@ -145,6 +145,16 @@ impl Speaker {
 
 }
 
+/// Turn off the speaker and release the SPEAKER-lock.
+/// This is the kill handler (for music threads)
+pub fn stop() {
+    let mut speaker = Speaker::new();
+    speaker.off();
+    unsafe {
+        SPEAKER.force_unlock();
+    }
+}
+
 /// Plays the Tetris theme using the PC speaker.
 /// Kévin Rapaille, August 2013, https://gist.github.com/XeeX/6220067
 pub fn tetris() {

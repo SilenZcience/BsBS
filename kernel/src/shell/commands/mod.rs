@@ -9,6 +9,7 @@ mod heap;
 mod heinefetch;
 mod help;
 mod keyboard;
+mod kill;
 mod ls;
 mod meminfo;
 mod ps;
@@ -27,6 +28,7 @@ pub fn register_all() {
     meminfo::register();
     cpuinfo::register();
     ps::register();
+    kill::register();
     ls::register();
     echo::register();
     text::register();

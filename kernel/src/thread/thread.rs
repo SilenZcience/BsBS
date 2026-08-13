@@ -102,6 +102,7 @@ pub struct Thread {
     stack: Vec<u64>,  // Memory for the stack
     stack_ptr: usize, // Pointer on the stack to the saved context
     entry: fn(),
+    kill_handler: Option<fn()>,
 }
 
 impl Thread {
@@ -118,7 +119,7 @@ impl Thread {
 
         // Create a new thread object
         let mut thread = Box::new(
-            Thread { id: next_id(), stack, stack_ptr, entry }
+            Thread { id: next_id(), stack, stack_ptr, entry, kill_handler: None }
         );
 
         // Prepare the stack for the thread so it can be started via `thread_start()`
@@ -149,6 +150,18 @@ impl Thread {
     /// Get the ID of the thread.
     pub fn id(&self) -> usize {
         self.id
+    }
+
+    /// Set a cleanup handler
+    pub fn set_kill_handler(&mut self, handler: fn()) {
+        self.kill_handler = Some(handler);
+    }
+
+    /// Invoke the cleanup handler
+    pub fn run_kill_handler(&mut self) {
+        if let Some(handler) = self.kill_handler.take() {
+            handler();
+        }
     }
 
     /// Prepare the stack of a newly created thread in a way that it can be used
