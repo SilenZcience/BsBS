@@ -158,7 +158,7 @@ chmod +x towbootctl
 [tasks.initrd]
 cwd = "${INITRD_DIRECTORY}"
 script = '''
-${TAR} --format=ustar -cf "${BOOTLOADER_DIRECTORY}/initrd.tar" *
+${TAR} --format=ustar -cf "${BOOTLOADER_DIRECTORY}/initrd.tar" .
 '''
 dependencies = [ "link-members" ]
 condition = { files_modified = { input = [
