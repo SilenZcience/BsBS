@@ -17,7 +17,10 @@ fn run(_args: &[String]) {
     let family = ((eax >> 8) & 0xf) + ((eax >> 20) & 0xff);
     let model = ((eax >> 4) & 0xf) + (((eax >> 16) & 0xf) << 4);
     let stepping = eax & 0xf;
-    let logical_cpus = ((ebx >> 16) & 0xff) as usize;
+    let mut logical_cpus = ((ebx >> 16) & 0xff) as usize;
+    if edx & (1 << 28) == 0 && logical_cpus == 0 {
+        logical_cpus = 1;
+    }
     println!("Family/Model/Step: {}/{}/{}", family, model, stepping);
     println!("Logical CPUs:      {}", logical_cpus);
 
