@@ -46,6 +46,14 @@ impl log::Log for Logger {
         let line = record.line().map_or(0, |l| l);
 
         if let Some(mut com1) = serial::COM1.try_lock() {
+            match level {
+                "TRC" => { let _ = write!(&mut com1, "\x1b[90m"); }, // Gray
+                "DBG" => { let _ = write!(&mut com1, "\x1b[36m"); }, // Cyan
+                "INF" => { let _ = write!(&mut com1, "\x1b[32m"); }, // Green
+                "WRN" => { let _ = write!(&mut com1, "\x1b[33m"); }, // Yellow
+                "ERR" => { let _ = write!(&mut com1, "\x1b[31m"); }, // Red
+                _ => {}
+            }
             let _ = write!(
                 &mut com1,
                 "[{:02}:{:02}:{:02}] [{level}] [{file}:{line}] ",
@@ -54,6 +62,7 @@ impl log::Log for Logger {
                 file = file,
                 line = line
             );
+            let _ = write!(&mut com1, "\x1b[0m");
             let _ = com1.write_fmt(*record.args());
             let _ = com1.write_str("\n");
         }
