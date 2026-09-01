@@ -6,6 +6,7 @@ use crate::device::terminal::{terminal, DEFAULT_BG_COLOR, INPUT_COLOR};
 use crate::library::once::Once;
 use crate::library::spinlock::Spinlock;
 use crate::thread::scheduler::scheduler;
+use crate::shell::shell::print_prompt;
 
 const MAX_HISTORY: usize = 64;
 
@@ -72,7 +73,7 @@ fn history_down(buf: &mut String) {
     }
 }
 
-pub fn read_line() -> String {
+pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
     let mut buf = String::new();
     loop {
         // no busy-spinning.
@@ -116,10 +117,59 @@ pub fn read_line() -> String {
                 }
                 _ => {}
             }
+        } else if event.scancode() == Some(Scancode::Tab) {
+            auto_complete(&mut cmd_names, &mut buf);
         } else if event.scancode() == Some(Scancode::Down) {
             history_down(&mut buf);
         } else if event.scancode() == Some(Scancode::Up) {
             history_up(&mut buf);
         }
+    }
+}
+
+fn auto_complete(cmd_names: &mut Vec<String>, buf: &mut String) {
+    let matches: Vec<&String> = cmd_names
+        .iter()
+        .filter(|name| name.starts_with(buf.as_str()))
+        .collect();
+
+    if matches.is_empty() {
+        return;
+    } else if matches.len() > 1 {
+        println!("");
+        for name in &matches {
+            println!("{}", name);
+        }
+        print_prompt();
+        for c in buf.chars() {
+            let mut buf4 = [0u8; 4];
+            let s = c.encode_utf8(&mut buf4);
+            print_colored!(s, INPUT_COLOR);
+        }
+    }
+
+    let mut longest_commong_prefix = matches[0].clone();
+    for name in &matches[1..] {
+        let mut i = 0;
+        while i < longest_commong_prefix.len() && i < name.len() && longest_commong_prefix.as_bytes()[i] == name.as_bytes()[i] {
+            i += 1;
+        }
+        longest_commong_prefix.truncate(i);
+    }
+
+    if longest_commong_prefix.len() > buf.len() {
+        for c in longest_commong_prefix[buf.len()..].chars() {
+            let mut buf4 = [0u8; 4];
+            let s = c.encode_utf8(&mut buf4);
+            print_colored!(s, INPUT_COLOR);
+        }
+        *buf = longest_commong_prefix.clone();
+    }
+
+    if matches.len() == 1 {
+        buf.push(' ');
+        let mut buf4 = [0u8; 4];
+        let s = ' '.encode_utf8(&mut buf4);
+        print_colored!(s, INPUT_COLOR);
     }
 }

@@ -68,3 +68,7 @@ pub fn expand_aliases(command: &str) -> String {
     }
     expanded.as_deref().unwrap_or(current_command).to_string()
 }
+
+pub fn list() -> Vec<(String, String)> {
+    aliases().lock().clone()
+}

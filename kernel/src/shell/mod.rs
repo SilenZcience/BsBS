@@ -1,8 +1,8 @@
 mod aliases;
-mod command;
+mod shell;
 mod parser;
 mod readline;
 mod registry;
 mod commands;
 
-pub use command::run_shell;
+pub use shell::run_shell;
