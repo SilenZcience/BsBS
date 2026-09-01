@@ -19,6 +19,9 @@ use crate::library::spinlock::Spinlock;
 /// After initialization, it can be accessed via the `filesystem()` function.
 static FILESYSTEM: Once<TarFs> = Once::new();
 
+/// cached  filelist of initrd
+static FILE_LIST: Once<Vec<(String, usize)>> = Once::new();
+
 /// Initialize the global TarFs filesystem with the given tar archive reference.
 /// This function should be called once during kernel startup.
 /// After calling this function, the filesystem can be accessed via the `filesystem()` function.
@@ -182,17 +185,19 @@ impl TarFs {
         Ok(())
     }
 
-    /// list all files in initrd
-    pub fn list_files(&self) -> Vec<(String, usize)> {
-        let mut files = Vec::new();
+    /// list all files in initrd.
+    pub fn list_files(&self) -> &'static [(String, usize)] {
+        FILE_LIST.init(|| {
+            let mut files = Vec::new();
 
-        for entry in self.archive.entries() {
-            if let Ok(name) = entry.filename().as_str() {
-                let stripped = name.strip_prefix("./").unwrap_or(name);
-                files.push((String::from(stripped), entry.data().len()));
+            for entry in self.archive.entries() {
+                if let Ok(name) = entry.filename().as_str() {
+                    let stripped = name.strip_prefix("./").unwrap_or(name);
+                    files.push((String::from(stripped), entry.data().len()));
+                }
             }
-        }
 
-        files
+            files
+        })
     }
 }

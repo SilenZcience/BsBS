@@ -14,7 +14,7 @@ fn run(_args: &[String]) {
         return;
     }
 
-    for (name, size) in &files {
+    for (name, size) in files {
         println!("  {:<40} {:>10} B {:>13}", name, size, format_size(*size));
     }
 

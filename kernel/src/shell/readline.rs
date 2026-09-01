@@ -111,9 +111,8 @@ pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
                 }
                 c if c.is_ascii_graphic() || c == ' ' => {
                     buf.push(c);
-                    let mut buf4 = [0u8; 4];
-                    let s = c.encode_utf8(&mut buf4);
-                    print_colored!(s, INPUT_COLOR);
+                    let byte = [c as u8];
+                    print_colored!(core::str::from_utf8(&byte).unwrap(), INPUT_COLOR);
                 }
                 _ => {}
             }
@@ -128,10 +127,22 @@ pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
 }
 
 fn auto_complete(cmd_names: &mut Vec<String>, buf: &mut String) {
-    let matches: Vec<&String> = cmd_names
-        .iter()
-        .filter(|name| name.starts_with(buf.as_str()))
-        .collect();
+    let rword_start = buf.rfind(' ').map_or(0, |i| i + 1);
+    let rword = &buf[rword_start..];
+
+    let files = crate::filesystem::tarfs::filesystem().list_files();
+    let matches: Vec<&String> = if rword_start == 0 {
+        cmd_names
+            .iter()
+            .filter(|name| name.starts_with(rword))
+            .collect()
+    } else {
+        files
+            .iter()
+            .map(|(name, _)| name)
+            .filter(|name| name.starts_with(rword))
+            .collect()
+    };
 
     if matches.is_empty() {
         return;
@@ -142,9 +153,8 @@ fn auto_complete(cmd_names: &mut Vec<String>, buf: &mut String) {
         }
         print_prompt();
         for c in buf.chars() {
-            let mut buf4 = [0u8; 4];
-            let s = c.encode_utf8(&mut buf4);
-            print_colored!(s, INPUT_COLOR);
+            let byte = [c as u8];
+            print_colored!(core::str::from_utf8(&byte).unwrap(), INPUT_COLOR);
         }
     }
 
@@ -157,19 +167,16 @@ fn auto_complete(cmd_names: &mut Vec<String>, buf: &mut String) {
         longest_commong_prefix.truncate(i);
     }
 
-    if longest_commong_prefix.len() > buf.len() {
-        for c in longest_commong_prefix[buf.len()..].chars() {
-            let mut buf4 = [0u8; 4];
-            let s = c.encode_utf8(&mut buf4);
-            print_colored!(s, INPUT_COLOR);
+    if longest_commong_prefix.len() > rword.len() {
+        for c in longest_commong_prefix[rword.len()..].chars() {
+            let byte = [c as u8];
+            print_colored!(core::str::from_utf8(&byte).unwrap(), INPUT_COLOR);
+            buf.push(c);
         }
-        *buf = longest_commong_prefix.clone();
-    }
 
-    if matches.len() == 1 {
-        buf.push(' ');
-        let mut buf4 = [0u8; 4];
-        let s = ' '.encode_utf8(&mut buf4);
-        print_colored!(s, INPUT_COLOR);
+        if matches.len() == 1 {
+            buf.push(' ');
+            print!(" ");
+        }
     }
 }
