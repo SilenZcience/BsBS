@@ -407,7 +407,7 @@ impl ISR for KeyboardISR {
     /// Keyboard interrupt handler.
     /// This function reads the next byte from the keyboard and decodes it into a key event.
     fn trigger(&self) {
-        debug!("Keyboard interrupt handler triggered");
+        // debug!("Keyboard interrupt handler triggered");
 
         let mut keyboard = KEYBOARD.lock();
         while let Some(event) = keyboard.try_read_next_byte() {
