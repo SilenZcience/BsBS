@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 
 pub fn print_prompt() {
-    print_colored!("User@HeineOS:-$ ", PROMPT_COLOR);
+    print_colored!("kernel@HeineOS:-$ ", PROMPT_COLOR);
 }
 
 pub fn run_shell() -> ! {

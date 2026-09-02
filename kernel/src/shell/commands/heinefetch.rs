@@ -16,7 +16,7 @@ fn run(_args: &[String]) {
     };
     let (cols, rows) = crate::device::terminal::terminal().lock().size();
     let stats = crate::allocator::global::heap_stats();
-    println!("                   *** ### ### ***                    User@HeineOS");
+    println!("                   *** ### ### ***                    kernel@HeineOS");
     println!("               *##                 ##*                ------------");
     println!("           *##                         ##*            OS:         HeineOS 0.1.0 (x86_64)");
     println!("        *##                               ##*         Bootloader: {}", bootloader);
