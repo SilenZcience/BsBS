@@ -147,9 +147,24 @@ fn auto_complete(cmd_names: &mut Vec<String>, buf: &mut String) {
     if matches.is_empty() {
         return;
     } else if matches.len() > 1 {
+        let mut match_width = matches[0].len();
+        for name in &matches[1..] {
+            match_width = match_width.max(name.len());
+        }
+        match_width += 2;
+        let (cols, _) = terminal().lock().size();
+        let per_line = 1.max(cols / match_width);
+        let mut count = 1;
         println!("");
         for name in &matches {
-            println!("{}", name);
+            print!("{:<w$}", name, w = match_width);
+            if count % per_line == 0 {
+                println!("");
+            }
+            count += 1;
+        }
+        if count % per_line != 1 {
+            println!("");
         }
         print_prompt();
         for c in buf.chars() {
