@@ -119,11 +119,17 @@ impl Terminal {
     /// Delete the character before the cursor and move the cursor one position back.
     pub fn backspace(&mut self) {
         let (col, row) = self.pos;
+        if col == 0 && row == 0 {
+            return;
+        }
+        let mut fb = self.framebuffer.lock();
+        Self::clear_cursor((col, row), &mut fb);
         if col > 0 {
-            let mut fb = self.framebuffer.lock();
-            Self::clear_cursor((col, row), &mut fb);
             Self::draw_cursor((col - 1, row), &mut fb);
             self.pos = (col - 1, row);
+        } else if row > 0 {
+            Self::draw_cursor((self.cols - 1, row - 1), &mut fb);
+            self.pos = (self.cols - 1, row - 1);
         }
     }
 
