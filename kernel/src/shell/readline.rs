@@ -1,6 +1,6 @@
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::device::key::Scancode;
+use crate::device::key::{KeyModifiers, Scancode};
 use crate::device::keyboard::keyboard_buffer;
 use crate::device::terminal::{terminal, DEFAULT_BG_COLOR, INPUT_COLOR};
 use crate::library::once::Once;
@@ -105,8 +105,20 @@ pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
                     return buf;
                 }
                 '\x08' => {
-                    if buf.pop().is_some() {
-                        terminal().lock().backspace();
+                    if event.modifiers().contains(KeyModifiers::CTRL_LEFT) {
+                        let mut term = terminal().lock();
+                        while buf
+                            .as_bytes()
+                            .last()
+                            .is_some_and(|last| !last.is_ascii_whitespace())
+                        {
+                            buf.pop();
+                            term.backspace();
+                        }
+                    } else {
+                        if buf.pop().is_some() {
+                            terminal().lock().backspace();
+                        }
                     }
                 }
                 c if c.is_ascii_graphic() || c == ' ' => {
