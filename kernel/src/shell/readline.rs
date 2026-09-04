@@ -87,53 +87,64 @@ pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
             }
         };
 
-        if let Some(c) = event.ascii() {
-            if event.scancode() == Some(Scancode::Tab) {
-                auto_complete(&mut cmd_names, &mut buf);
-            } else if event.scancode() == Some(Scancode::Down) {
-                history_down(&mut buf);
-            } else if event.scancode() == Some(Scancode::Up) {
-                history_up(&mut buf);
-            } else {
-                match c {
-                    '\r' => {
-                        println!("");
-                        if !buf.is_empty() {
-                            let mut hist = history().lock();
-                            if hist.entries.last().map_or(true, |last| *last != buf) {
-                                if hist.entries.len() >= MAX_HISTORY {
-                                    hist.entries.remove(0);
-                                }
-                                hist.entries.push(buf.clone());
+        // let ascii = match event.ascii() {
+        //     Some(c) => c,
+        //     None => '\''
+        // };
+        // let pressed = event.pressed();
+        // log::debug!(
+        //     "KeyEvent: ascii: '{}' scancode: {:?} modifiers: {:?} pressed: {}",
+        //     ascii,
+        //     event.scancode(),
+        //     event.modifiers(),
+        //     pressed
+        // );
+
+        if event.scancode() == Some(Scancode::Tab) {
+            auto_complete(&mut cmd_names, &mut buf);
+        } else if event.scancode() == Some(Scancode::Down) {
+            history_down(&mut buf);
+        } else if event.scancode() == Some(Scancode::Up) {
+            history_up(&mut buf);
+        } else if let Some(c) = event.ascii() {
+            match c {
+                '\r' => {
+                    println!("");
+                    if !buf.is_empty() {
+                        let mut hist = history().lock();
+                        if hist.entries.last().map_or(true, |last| *last != buf) {
+                            if hist.entries.len() >= MAX_HISTORY {
+                                hist.entries.remove(0);
                             }
-                            hist.index = hist.entries.len();
-                            hist.saved.clear();
+                            hist.entries.push(buf.clone());
                         }
-                        return buf;
+                        hist.index = hist.entries.len();
+                        hist.saved.clear();
                     }
-                    '\x08' => {
-                        if buf.pop().is_some() {
-                            terminal().lock().backspace();
-                        }
-                        if event.modifiers().contains(KeyModifiers::CTRL_LEFT) {
-                            let mut term = terminal().lock();
-                            while buf
-                                .as_bytes()
-                                .last()
-                                .is_some_and(|last| !last.is_ascii_whitespace())
-                            {
-                                buf.pop();
-                                term.backspace();
-                            }
-                        }
-                    }
-                    c if c.is_ascii_graphic() || c == ' ' => {
-                        buf.push(c);
-                        let byte = [c as u8];
-                        print_colored!(core::str::from_utf8(&byte).unwrap(), INPUT_COLOR);
-                    }
-                    _ => {}
+                    return buf;
                 }
+                '\x08' => {
+                    if buf.pop().is_some() {
+                        terminal().lock().backspace();
+                    }
+                    if event.modifiers().contains(KeyModifiers::CTRL_LEFT) {
+                        let mut term = terminal().lock();
+                        while buf
+                            .as_bytes()
+                            .last()
+                            .is_some_and(|last| !last.is_ascii_whitespace())
+                        {
+                            buf.pop();
+                            term.backspace();
+                        }
+                    }
+                }
+                c if c.is_ascii_graphic() || c == ' ' => {
+                    buf.push(c);
+                    let byte = [c as u8];
+                    print_colored!(core::str::from_utf8(&byte).unwrap(), INPUT_COLOR);
+                }
+                _ => {}
             }
         }
     }
