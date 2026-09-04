@@ -38,8 +38,14 @@ pub fn run_shell() -> ! {
             None => continue,
         };
 
-        match registry::find(&aliases::expand_aliases(parsed.command())) {
-            Some(cmd) => (cmd.run)(parsed.args()),
+        let expanded_cmd = aliases::expand_aliases(parsed.command());
+        let mut expanded_parts = expanded_cmd.split_whitespace();
+        let cmd_name = expanded_parts.next().unwrap_or(parsed.command());
+        let mut args: Vec<String> = expanded_parts.map(String::from).collect();
+        args.extend(parsed.args().iter().cloned());
+
+        match registry::find(cmd_name) {
+            Some(cmd) => (cmd.run)(&args),
             None => {
                 println!("Unknown command: '{}'", parsed.command());
                 println!("Type 'help' for available commands");
