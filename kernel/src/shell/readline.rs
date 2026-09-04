@@ -105,6 +105,9 @@ pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
                     return buf;
                 }
                 '\x08' => {
+                    if buf.pop().is_some() {
+                        terminal().lock().backspace();
+                    }
                     if event.modifiers().contains(KeyModifiers::CTRL_LEFT) {
                         let mut term = terminal().lock();
                         while buf
@@ -114,10 +117,6 @@ pub fn read_line(mut cmd_names: &mut Vec<String>) -> String {
                         {
                             buf.pop();
                             term.backspace();
-                        }
-                    } else {
-                        if buf.pop().is_some() {
-                            terminal().lock().backspace();
                         }
                     }
                 }
