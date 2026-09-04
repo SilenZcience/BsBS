@@ -175,11 +175,11 @@ impl Keyboard {
 
             // Decode the byte
             if self.decode_byte(code) {
-                let event = self.gather;
-                let modifiers = event.modifiers();
-                self.gather = KeyEvent::new();
-                self.gather.insert_modifiers(modifiers);
-                return Some(event);
+                // let event = self.gather;
+                // let modifiers = event.modifiers();
+                // self.gather = KeyEvent::new();
+                // self.gather.insert_modifiers(modifiers);
+                return Some(self.gather);
             }
         }
     }
