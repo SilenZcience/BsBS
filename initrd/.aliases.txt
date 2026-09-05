@@ -1,3 +1,4 @@
 # Shell aliases. Format: alias=command
 poweroff=shutdown
 cls=clear
+heinebmp=bitmap img/heine.bmp

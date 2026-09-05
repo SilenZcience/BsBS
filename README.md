@@ -1,4 +1,23 @@
 
+
+# Project
+
+For `lesson-7` a user friendly shell has been implemented. All demos can be started as a command within that shell. <br>
+Additionally further commands have been added to flesh out the terminal experience.
+A list of all commands can be displayed using the `help` command.
+
+Several features have been added to improve on the user experience:
+- The shell supports autocomplete using the `Scancode::Tab` for all commands or files in the tar-filesystem. This way it is no longer necessary to fully type out long file paths or complicated commands.
+- Using the navigation arrow-keys `Scancode::Down` or `Scancode::Up` the shell supports moving through the command history.
+- An alias-system has been implemented. To define your own aliases for long commands (including static parameters) you can simply expand upon the `.aliases.txt`-file inside the initrd folder.
+
+![image](img/heinefetch.png)
+
+
+
+
+
+
 ## Set up the environment
 
 ### Prerequisites

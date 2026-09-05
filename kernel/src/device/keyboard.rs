@@ -15,7 +15,6 @@ use crate::library::spinlock::Spinlock;
 use crate::library::once::Once;
 use crate::interrupt::dispatcher::{IntVectors, InterruptVector};
 use crate::interrupt::isr::ISR;
-use log::debug;
 
 /// The global keyboard instance protected by a spinlock.
 /// This instance can be used to poll key events from the keyboard. Process the key event
