@@ -51,7 +51,7 @@ const TIMER_FREQUENCY: usize = 1193182;
 const NANOSECONDS_PER_TICK: usize = 1_000_000_000 / TIMER_FREQUENCY;
 
 /// The interval at which the timer should generate interrupts (1 ms).
-const TIMER_INTERRUPT_INTERVAL_MS: usize = 2;
+const TIMER_INTERRUPT_INTERVAL_MS: usize = 2; // NOTE: 1ms is too fast for the CPU to handle (on WSL)
 
 /// Spinner animation interval in milliseconds.
 const SPINNER_INTERVAL_MS: usize = 250;
@@ -137,7 +137,7 @@ impl Timer {
         let reload = TIMER_FREQUENCY / (1000 / interval_ms);
 
         unsafe {
-            self.control_port.outb(0x36u8);
+            self.control_port.outb(0x36u8); // 0b00110110 Channel 0, LSB/MSB access, mode 3
             self.data_port0.outb((reload & 0xFF) as u8);
             self.data_port0.outb((reload >> 8) as u8);
         }

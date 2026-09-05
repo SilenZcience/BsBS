@@ -10,6 +10,7 @@ use bitflags::bitflags;
 use alloc::boxed::Box;
 use crate::device::cpu::IoPort;
 use crate::device::key::{KeyEvent, KeyModifiers, KeyEventQueue};
+use crate::device::pic::{PIC, Irq};
 use crate::library::spinlock::Spinlock;
 use crate::library::once::Once;
 use crate::interrupt::dispatcher::{IntVectors, InterruptVector};
@@ -166,14 +167,12 @@ impl Keyboard {
                 return None;
             }
 
-            // Read the byte from the data port
-            // Bytes from the PS/2 mouse are discarded here, because they also arrive via the controller.
             let code = unsafe { self.data_port.inb() };
+            // Bytes from the PS/2 mouse are discarded
             if (status & KeyboardStatus::AUXILIARY_DEVICE.bits()) != 0 {
                 continue;
             }
 
-            // Decode the byte
             if self.decode_byte(code) {
                 return Some(self.gather);
             }
@@ -209,7 +208,7 @@ impl Keyboard {
     }
 
     /// Turn on or off the specified keyboard LED.
-    fn set_led(&mut self, led: LedStatus, on: bool) {
+    fn set_led(&mut self, led: LedStatus, on: bool) { // NOTE: not tested at all
         // Update the internal LED state
         if on {
             self.leds.insert(led);
@@ -417,8 +416,6 @@ impl ISR for KeyboardISR {
 /// Register the keyboard interrupt handler with the interrupt dispatcher
 /// and enable keyboard interrupts at the PIC.
 pub fn plugin() {
-    use crate::device::pic::{PIC, Irq};
-
     IntVectors::register(InterruptVector::Keyboard, Box::new(KeyboardISR));
     PIC.lock().allow(Irq::Keyboard);
 }

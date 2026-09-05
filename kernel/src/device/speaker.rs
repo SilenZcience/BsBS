@@ -125,7 +125,7 @@ impl Speaker {
 
         self.on();
         pit::wait(duration);
-        // self.off();
+        self.off();
     }
 
     /// Turn on the speaker.

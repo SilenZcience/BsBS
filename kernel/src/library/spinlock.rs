@@ -37,7 +37,6 @@ impl<T> Spinlock<T> {
 
     /// Try to acquire the lock once without blocking.
     pub fn try_lock(&'_ self) -> Option<SpinlockGuard<'_, T>> {
-        // Atomically set lock to true, return guard only if it was previously false
         if !self.lock.swap(true, Ordering::Acquire) {
             Some(SpinlockGuard { lock: self })
         } else {
@@ -47,12 +46,11 @@ impl<T> Spinlock<T> {
 
     /// Spin until the lock is acquired, then return a guard that allows access to the data.
     pub fn lock(&'_ self) -> SpinlockGuard<'_, T> {
-        // Spin until try_lock succeeds
         loop {
             if let Some(guard) = self.try_lock() {
                 return guard;
             }
-            // Yield the CPU to allow other threads to run and release the lock.
+
             scheduler().yield_cpu();
         }
     }
@@ -61,7 +59,6 @@ impl<T> Spinlock<T> {
     /// This is called automatically when the `SpinlockGuard` is dropped
     /// and thus is not publicly accessible.
     fn unlock(&self) {
-        // Release the lock
         self.lock.store(false, Ordering::Release);
     }
 

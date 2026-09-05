@@ -146,7 +146,7 @@ impl IntVectors {
     }
 
     /// Check if an ISR is registered for `vector`. If so, call it.
-    pub fn report(&self, vector: u8) -> Option<*const dyn ISR> {
+    pub fn report(&self, vector: u8) -> Option<*const dyn ISR> { // NOTE: gets called in dispatch_interrupt instead
         self.map
             .get(vector as usize)
             .and_then(|isr| isr.as_deref())
