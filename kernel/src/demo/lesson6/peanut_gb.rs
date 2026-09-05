@@ -201,7 +201,7 @@ unsafe extern "C" fn lcd_draw_line(_gb: *mut c_void, pixels: *const u8, line: u8
     let mut fb = crate::device::terminal::framebuffer().lock();
     let line = line as usize;
     let x_offset = (fb.width - GB_SCREEN_RES.0 * SCALE) / 2;
-    let y_offset = (fb.height - GB_SCREEN_RES.1 * SCALE) / 2;
+    let y_offset = (fb.height - GB_SCREEN_RES.1 * SCALE) / 2 + 5;
     for x in 0..GB_SCREEN_RES.0 {
         let pixel = unsafe { *pixels.add(x) };
         let color = PALETTE[(pixel & 0x03) as usize];
