@@ -163,33 +163,36 @@ impl Coroutine {
         let coroutine = ptr::from_mut(self) as u64;
         let length = self.stack.len();
 
-        self.stack[length - 1] = kickoff; // Address of 'kickoff' -> Used as return address
-        self.stack[length - 2] = 0; // r8
-        self.stack[length - 3] = 0; // r9
-        self.stack[length - 4] = 0; // r10
-        self.stack[length - 5] = 0; // r11
-        self.stack[length - 6] = 0; // r12
-        self.stack[length - 7] = 0; // r13
-        self.stack[length - 8] = 0; // r14
-        self.stack[length - 9] = 0; // r15
-        self.stack[length - 10] = 0; // rax
-        self.stack[length - 11] = 0; // rbx
-        self.stack[length - 12] = 0; // rcx
-        self.stack[length - 13] = 0; // rdx
-        self.stack[length - 14] = 0; // rsi
-        self.stack[length - 15] = coroutine; // rdi -> First parameter for 'kickoff'
-        self.stack[length - 16] = 0; // rbp
-        self.stack[length - 17] = 0x2; // rflags (IE = 0); interrupts disabled
+        // After the 16 pops and the 'ret' in 'thread_start'/'thread_switch' (17 * 8 = 136 bytes)
+        // 'kickoff' is entered with RSP % 16 == 8 as required by the SysV calling convention.
+        self.stack[length -  1] = 0; // padding for 16 byte alignement !
+        self.stack[length -  2] = kickoff; // Address of 'kickoff' -> Used as return address
+        self.stack[length -  3] = 0; // r8
+        self.stack[length -  4] = 0; // r9
+        self.stack[length -  5] = 0; // r10
+        self.stack[length -  6] = 0; // r11
+        self.stack[length -  7] = 0; // r12
+        self.stack[length -  8] = 0; // r13
+        self.stack[length -  9] = 0; // r14
+        self.stack[length - 10] = 0; // r15
+        self.stack[length - 11] = 0; // rax
+        self.stack[length - 12] = 0; // rbx
+        self.stack[length - 13] = 0; // rcx
+        self.stack[length - 14] = 0; // rdx
+        self.stack[length - 15] = 0; // rsi
+        self.stack[length - 16] = coroutine; // rdi -> First parameter for 'kickoff'
+        self.stack[length - 17] = 0; // rbp
+        self.stack[length - 18] = 0x2; // rflags (IE = 0); interrupts disabled
 
-        self.stack_ptr = self.stack_ptr - (size_of::<u64>() * 16);
+        self.stack_ptr = ptr::from_ref(&self.stack[length - 18]) as usize;
     }
 
     /// Called indirectly by using the prepared stack in 'coroutine_start' and 'coroutine_switch'.
-    fn kickoff(&mut self) {
+    extern "C" fn kickoff(coroutine: &mut Coroutine) {
         // Interrupts are disabled during coroutine start, so we need to re-enable them here
         cpu::enable_int();
-        (self.entry)(self);
+        (coroutine.entry)(coroutine);
 
-        panic!("Coroutine {} finished!", self.id());
+        panic!("Coroutine {} finished!", coroutine.id());
     }
 }
