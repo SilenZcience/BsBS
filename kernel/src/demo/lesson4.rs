@@ -58,6 +58,7 @@ fn coroutine_loop(coroutine: &mut Coroutine) {
         for _ in 0..1000000 {
             // fake sleep
         }
+        pit::wait(100);
         coroutine.switch();
     }
 }
