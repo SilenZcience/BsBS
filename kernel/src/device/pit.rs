@@ -66,9 +66,6 @@ static TIMER: Once<Timer> = Once::new();
 /// This variable is updated by the timer interrupt service routine.
 static SYSTEM_TIME: AtomicUsize = AtomicUsize::new(0);
 
-/// Tracks the last time a thread was yielded in the PIT ISR.
-static LAST_YIELD_TIME: AtomicUsize = AtomicUsize::new(0);
-
 /// Characters used for the spinner animation.
 static SPINNER_CHARS: &[char] = &['|', '/', '-', '\\'];
 
@@ -100,11 +97,10 @@ impl ISR for TimerISR {
     /// This function updates the system time and draws a spinner on the screen.
     /// Yields the CPU at a fixed interval for thread switching.
     fn trigger(&self) {
-        let prev_time = SYSTEM_TIME.fetch_add(self.interval_ms, Ordering::Relaxed);
-        let current_time = prev_time + self.interval_ms;
+        let current_time = SYSTEM_TIME.fetch_add(self.interval_ms, Ordering::Relaxed);
 
-        if prev_time % SPINNER_INTERVAL_MS == 0 {
-            let spinner_index = (prev_time / SPINNER_INTERVAL_MS) % SPINNER_CHARS.len();
+        if current_time % SPINNER_INTERVAL_MS == 0 {
+            let spinner_index = (current_time / SPINNER_INTERVAL_MS) % SPINNER_CHARS.len();
             if let Some(mut fb) = terminal::framebuffer().try_lock() {
                 let x = fb.width - CHAR_WIDTH;
                 let y = 0;
@@ -112,9 +108,7 @@ impl ISR for TimerISR {
             }
         }
 
-        let last_yield = LAST_YIELD_TIME.load(Ordering::Relaxed);
-        if current_time - last_yield >= YIELD_INTERVAL_MS {
-            LAST_YIELD_TIME.store(current_time, Ordering::Relaxed);
+        if current_time % YIELD_INTERVAL_MS == 0 {
             unsafe {
                 unlock_int_vectors();
             }
