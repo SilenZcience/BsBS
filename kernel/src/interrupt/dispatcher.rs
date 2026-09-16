@@ -81,7 +81,6 @@ pub unsafe fn unlock_int_vectors() {
 /// The main interrupt dispatcher.
 /// Every interrupt is routed here, if not specified otherwise in the IDT.
 pub fn dispatch_interrupt(vector: u8, stack_frame: InterruptStackFrame, error_code: Option<u64>) {
-    let _ = stack_frame;
     // debug!("Handling interrupt vector {}", vector); // NOTE: race condition if print to screen
 
     // match error_code { // fuck this println
@@ -98,7 +97,11 @@ pub fn dispatch_interrupt(vector: u8, stack_frame: InterruptStackFrame, error_co
             (&*isr).trigger();
         }
     } else {
-        panic!("No ISR registered for interrupt vector {}", vector);
+        let rip = stack_frame.instruction_pointer;
+        panic!(
+            "Unhandled CPU exception on vector {} at RIP {:#x}, error code: {:?}",
+            vector, rip, error_code
+        );
     }
 }
 
