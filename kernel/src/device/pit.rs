@@ -105,6 +105,14 @@ impl ISR for TimerISR {
                 let x = fb.width - CHAR_WIDTH;
                 let y = 0;
                 fb.draw_char(SPINNER_CHARS[spinner_index], x, y, framebuffer::RED, framebuffer::BLACK);
+                if let Some(terminal) = terminal::terminal().try_lock() {
+                    if current_time % (4 * SPINNER_INTERVAL_MS) == 0 {
+                        terminal::Terminal::draw_cursor(terminal.pos(), &mut fb);
+                    } else if current_time % (2 * SPINNER_INTERVAL_MS) == 0 {
+                        terminal::Terminal::clear_cursor(terminal.pos(), &mut fb);
+                    }
+                }
+
             }
         }
 

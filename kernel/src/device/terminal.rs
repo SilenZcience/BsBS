@@ -188,7 +188,7 @@ impl Terminal {
     }
 
     /// Draw the cursor at the given position by drawing a white space character in the default foreground color.
-    fn draw_cursor(pos: (usize, usize), framebuffer: &mut Framebuffer) {
+    pub fn draw_cursor(pos: (usize, usize), framebuffer: &mut Framebuffer) {
         let x = pos.0 * framebuffer::CHAR_WIDTH;
         let y = pos.1 * framebuffer::CHAR_HEIGHT;
 
@@ -196,7 +196,7 @@ impl Terminal {
     }
 
     /// Clear the cursor at the given position by drawing a white space character in the default background color.
-    fn clear_cursor(pos: (usize, usize), framebuffer: &mut Framebuffer) {
+    pub fn clear_cursor(pos: (usize, usize), framebuffer: &mut Framebuffer) {
         let x = pos.0 * framebuffer::CHAR_WIDTH;
         let y = pos.1 * framebuffer::CHAR_HEIGHT;
 
