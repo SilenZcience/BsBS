@@ -46,6 +46,32 @@ On macOS you can use [Homebrew](https://brew.sh/) to install the required tools:
 brew install x86_64-elf-binutils nasm x86_64-elf-gdb qemu
 ```
 
+On Arch Linux (and derivatives such as CachyOS, which is Arch-based) you can install all required tools with a single pacman command:
+
+```bash
+sudo pacman -S --needed base-devel nasm wget qemu-full gdb
+```
+
+What each package provides:
+
+- `base-devel` — the C toolchain (`gcc`) and binutils (`ld`, `ar`), used to compile the kernel's C parts and link the final kernel image.
+- `nasm` — the *Netwide Assembler*, used to assemble `boot.asm`.
+- `wget` — used to download the Towboot utility and the OVMF UEFI firmware.
+- `qemu-full` — QEMU including all audio backends, required to run HeineOS. If you prefer a slimmer install, `qemu-system-x86` works as well.
+- `gdb` — only needed for debugging with VSCode or RustRover.
+- `tar` is already part of Arch's `base` group, so it does not need to be installed separately.
+
+Finally, install Rust with rustup and the required nightly toolchain:
+
+```bash
+sudo pacman -S rustup
+rustup default stable
+rustup toolchain install nightly-2026-04-01
+cargo install --no-default-features cargo-make
+```
+
+If you prefer to install `cargo-make` as a package instead of compiling it, it is available in the AUR (`cargo-make`). Note that the CachyOS repositories already enable the AUR, so `paru -S cargo-make` works out of the box there.
+
 ### Building and running HeineOS
 
 You should now be able to build and run HeineOS. Clone the repository and run the following commands:
