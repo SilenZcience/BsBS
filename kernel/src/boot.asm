@@ -171,7 +171,9 @@ load_gdt:
     mov fs, ax
     mov gs, ax
 
-    ; TODO: Load TSS register with the TSS descriptor
+    ; Load TSS register with the TSS descriptor
+    mov ax, (5 * 0x08)
+    ltr ax
 
     ; Load data segment selector into stack segment register
     mov ax, (2 * 0x08)
@@ -187,13 +189,22 @@ load_cs_jmp:
 
 ; Set TSS base address in TSS descriptor
 tss_set_base_address:
-    ; TODO: Implement this function to set the TSS base address
+    mov rax, tss
+    mov rcx, tss_descriptor
+    mov word [rcx+2], ax
+    shr rax, 16
+    mov byte [rcx+4], al
+    shr rax, 8
+    mov byte [rcx+7], al
+    shr rax, 8
+    mov dword [rcx+8], eax
     ret
 
 ; Set kernel stack (rsp0) in TSS
 ; First Parameter -> RDI = Pointer to kernel stack
 tss_set_rsp0:
-    ; TODO: Implement this function to set the rsp0 entry in the TSS
+    mov rax, tss
+    mov qword [rax+4], rdi
     ret
 
 ; Get the start address of the TSS (return value in rax)
@@ -206,6 +217,12 @@ get_tss_address:
 ; Global Descriptor Table (GDT)
 align 8
 gdt:
+    ; 2 Byte: Limit 0:15
+    ; 2 Byte: Base 0:15
+    ; Present=1, DPL(2bit), SystemSegment=0, Type=(0:Data/1:Kernel), Direction(grows up/down), ReadWriteBit, Accessed=0, Base 16:23
+    ; Base 24:31, Granulatiry(0:Bytes/1:Pages), D/BprotectedMode(0:16/1:32), LongMode, AVL, Limit 16:19
+
+
     dw  0, 0, 0, 0  ; Null descriptor
 
     ; Kernel code segment descriptor
@@ -232,13 +249,25 @@ gdt:
     dw  0xf200     ; Base  [16:23] = 0; Access Byte = { Data Segment, Writable, DPL = 3, Present }
     dw  0x00cf     ; Limit [16:19] = 0xf; Base [31:24] = 0; Flags = { Granularity = 4 KiB, Long Mode }
 
-    ; TODO: Add task state segment (TSS)
+    ; Task state segment descriptor TSSD
+    ; we set the base address at runtime using the function tss_set_base_address
+    tss_descriptor:
+        ; http://wiki.osdev.org/Task_State_Segment
+        dw  0x0067     ; Limit [00:15] = 0x67 (0x68 - 1, last byte of TSS)
+        dw  0x0000     ; Base  [00:15] = 0
+        ; 1000 1001 00000000
+        dw  0x8900     ; Base  [16:23] = 0; Access Byte = { System Segment, DPL = 0, Present }
+        dw  0x0000     ; Limit [16:19] = 0; Base [31:24] = 0; Flags = { Granularity = 1 Byte }
+        dw  0x0000     ; Base  [32:47] = 0
+        dw  0x0000     ; Base  [48:63] = 0
+        dw  0x0000     ; Reserved
+        dw  0x0000     ; Reserved
+
 
 ; Descriptor for the GDT
 align 8
 gdt_descriptor:
-    ; TODO: Adjust limit after adding descriptors to GDT
-    dw 5 * 8 - 1    ; GDT has 3 entries of 8 bytes each; Limit = size - 1
+    dw 7 * 8 - 1    ; GDT has 6 entries of 8 bytes each (tss has double size!); Limit = size - 1
     dq gdt          ; Address of the GDT
 
 tss:
