@@ -18,7 +18,7 @@ use crate::thread::thread::Thread;
 /// The coroutines switch to the next coroutine after each print.
 /// the coroutines run on their own thread...
 pub fn coroutine_demo() {
-    let thread = Thread::new(coroutine_demo_loop);
+    let thread = Thread::new_kernel_thread(coroutine_demo_loop);
     info!("Started thread with ID={}", thread.id());
     scheduler().ready(thread);
 }
@@ -70,7 +70,7 @@ pub fn thread_demo() {
     let sched = scheduler();
 
     for _ in 0..5 {
-        let thread = Thread::new(counter_thread);
+        let thread = Thread::new_kernel_thread(counter_thread);
         info!("Started thread with ID={}", thread.id());
         sched.ready(thread);
     }

@@ -253,7 +253,7 @@ pub fn speaker_demo(args: &[String]) {
         _ => play_tetris,
     };
 
-    let mut thread = Thread::new(entry);
+    let mut thread = Thread::new_kernel_thread(entry);
     thread.set_kill_handler(speaker::stop);
     info!("Started speaker thread with ID={}", thread.id());
     scheduler().ready(thread);

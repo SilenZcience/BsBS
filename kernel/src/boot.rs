@@ -40,10 +40,12 @@ mod allocator;
 mod shell;
 mod filesystem;
 mod sysinfo;
+mod paging;
 
 extern crate alloc;
 
 use crate::consts::{heap_start, HEAP_SIZE};
+use crate::paging::pages::setup_initial_paging;
 use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
 
@@ -117,6 +119,9 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }
 
+    // This is only a temporary solution, as we will implement our own page tables in a later assignment.
+    setup_initial_paging();
+
     info!("Initializing heap allocator");
     allocator::global::init_allocator(heap_start(), HEAP_SIZE);
 
@@ -158,8 +163,9 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
 
     info!("Boot sequence finished");
 
+    // crate::demo::lesson8::user_thread_demo();
     // run the shell as a thread
-    let shell_thread = Thread::new(shell_main);
+    let shell_thread = Thread::new_kernel_thread(shell_main);
     scheduler().ready(shell_thread);
 
     scheduler().schedule();
