@@ -253,7 +253,7 @@ gdt:
     ; we set the base address at runtime using the function tss_set_base_address
     tss_descriptor:
         ; http://wiki.osdev.org/Task_State_Segment
-        dw  0x0067     ; Limit [00:15] = 0x67 (0x68 - 1, last byte of TSS)
+        dw  0x0068     ; Limit [00:15] = 104 Bytes
         dw  0x0000     ; Base  [00:15] = 0
         ; 1000 1001 00000000
         dw  0x8900     ; Base  [16:23] = 0; Access Byte = { System Segment, DPL = 0, Present }

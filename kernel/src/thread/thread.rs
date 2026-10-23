@@ -8,6 +8,7 @@
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use alloc::vec;
 use core::{fmt, ptr};
 use core::arch::naked_asm;
 use core::fmt::Display;
@@ -107,7 +108,7 @@ unsafe extern "C" fn thread_switch(current_stack_ptr: *mut usize, next_stack: us
 unsafe extern "C" fn thread_user_start(stack_ptr: usize) {
     naked_asm!(
         "mov rsp, rdi", // Switch stack
-        "pop rdi",
+        "pop rdi", // frame[0] -> RDI, RSP now = &frame[1]
         "iretq" // Return to user mode
     )
 }
@@ -130,15 +131,8 @@ impl Thread {
     /// Create a new thread with the given entry function.
     pub fn new_kernel_thread(entry: fn()) -> Box<Thread> {
         // Allocate memory for the stack and initialize it to zero
-        let mut kernel_stack = Vec::<u64>::with_capacity(STACK_SIZE / 8);
-        for _ in 0..kernel_stack.capacity() {
-            kernel_stack.push(0);
-        }
-
-        let mut user_stack = Vec::<u64>::with_capacity(STACK_SIZE / 8);
-        for _ in 0..user_stack.capacity() {
-            user_stack.push(0);
-        }
+        let kernel_stack = vec![0u64; STACK_SIZE / 8];
+        let user_stack   = vec![0u64; STACK_SIZE / 8];
 
         // Set the stack pointer to the top of the stack
         let stack_ptr = ptr::from_ref(&kernel_stack[kernel_stack.capacity() - 1]) as usize;
