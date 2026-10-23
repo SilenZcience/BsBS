@@ -15,6 +15,14 @@ TOWBOOT_URL = "https://github.com/hhuOS/towboot/releases/download/v${TOWBOOT_VER
 LINKER = { source = "${CARGO_MAKE_RUST_TARGET_OS}", default_value = "ld", mapping = { "macos" = "x86_64-elf-ld" } }
 TAR = { source = "${CARGO_MAKE_RUST_TARGET_OS}", default_value = "tar", mapping = { "macos" = "gtar" } }
 QEMU_AUDIO_DEVICE = { source = "${CARGO_MAKE_RUST_TARGET_OS}", default_value = "pa", mapping = { "macos" = "coreaudio" } }
+# Full "-audiodev" option string.
+# For the "pa" backend we pass the server socket explicitly. Without it QEMU stats
+# "$XDG_RUNTIME_DIR/pulse/pid" before connecting and aborts with
+# "could not stat pidfile" when that file is missing. A pipewire-pulse server only
+# writes that pidfile on startup (it is socket activated), so the first QEMU launch
+# of a fresh login session would fail. See QEMU's audio/paaudio.c.
+QEMU_AUDIO_OPTS = { script = ["sh -c 'd=\"$XDG_RUNTIME_DIR\"; [ -n \"$d\" ] || d=\"/run/user/$(id -u)\"; s=\"${PULSE_SERVER:-unix:$d/pulse/native}\"; case \"$QEMU_AUDIO_DEVICE\" in pa) echo \"id=audio0,driver=pa,server=$s\";; *) echo \"id=audio0,driver=$QEMU_AUDIO_DEVICE\";; esac'"] }
+QEMU_ACCEL = { script = ["sh -c 'case \"$(uname -s)\" in Darwin) echo hvf;; *) if [ -w /dev/kvm ]; then echo kvm; else echo \"tcg,thread=multi\"; fi;; esac'"] }
 
 [tasks.default]
 alias = "qemu"
@@ -36,12 +44,15 @@ args = [
     "-serial", "none",
     "-serial", "file:gameboy.sav",
 
+    # Hardware acceleration (KVM on Linux, HVF on macOS)
+    "-accel", "${QEMU_ACCEL}",
+
     # Hard disk drive configuration
     "-drive", "driver=raw,if=none,id=boot,file.filename=${IMAGE}",
     "-device", "ide-hd,drive=boot",
 
     # Audio configuration (Using pulse audio for Linux)
-    "-audiodev", "id=audio0,driver=${QEMU_AUDIO_DEVICE}",
+    "-audiodev", "${QEMU_AUDIO_OPTS}",
 
     # Network configuration
     "-nic", "model=rtl8139,id=rtl8139,hostfwd=udp::1797-:1797,hostfwd=tcp::1797-:1797",
@@ -92,12 +103,15 @@ args = [
     "-rtc", "base=localtime",
     "-serial", "stdio",
 
+    # Hardware acceleration (KVM on Linux, HVF on macOS)
+    "-accel", "${QEMU_ACCEL}",
+
     # Hard disk drive configuration
     "-drive", "driver=raw,if=none,id=boot,file.filename=${IMAGE}",
     "-device", "ide-hd,drive=boot",
 
     # Audio configuration (Using pulse audio for Linux)
-    "-audiodev", "id=audio0,driver=${QEMU_AUDIO_DEVICE}",
+    "-audiodev", "${QEMU_AUDIO_OPTS}",
 
     # Network configuration
     "-nic", "model=rtl8139,id=rtl8139,hostfwd=udp::1797-:1797,hostfwd=tcp::1797-:1797",
