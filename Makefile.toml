@@ -22,7 +22,8 @@ QEMU_AUDIO_DEVICE = { source = "${CARGO_MAKE_RUST_TARGET_OS}", default_value = "
 # writes that pidfile on startup (it is socket activated), so the first QEMU launch
 # of a fresh login session would fail. See QEMU's audio/paaudio.c.
 QEMU_AUDIO_OPTS = { script = ["sh -c 'd=\"$XDG_RUNTIME_DIR\"; [ -n \"$d\" ] || d=\"/run/user/$(id -u)\"; s=\"${PULSE_SERVER:-unix:$d/pulse/native}\"; case \"$QEMU_AUDIO_DEVICE\" in pa) echo \"id=audio0,driver=pa,server=$s\";; *) echo \"id=audio0,driver=$QEMU_AUDIO_DEVICE\";; esac'"] }
-QEMU_ACCEL = { script = ["sh -c 'case \"$(uname -s)\" in Darwin) echo hvf;; *) if [ -w /dev/kvm ]; then echo kvm; else echo \"tcg,thread=multi\"; fi;; esac'"] }
+QEMU_ACCEL = { script = ["sh -c 'case \"$(uname -s)-$(uname -m)\" in Darwin-x86_64) echo hvf;; *) if [ -w /dev/kvm ]; then echo kvm; else echo \"tcg,thread=multi\"; fi;; esac'"] }
+QEMU_CPU = { script = ["sh -c 'case \"$(uname -s)-$(uname -m)\" in Darwin-x86_64) echo host;; *) if [ -w /dev/kvm ]; then echo host; else echo qemu64; fi;; esac'"] }
 
 [tasks.default]
 alias = "qemu"
@@ -46,6 +47,7 @@ args = [
 
     # Hardware acceleration (KVM on Linux, HVF on macOS)
     "-accel", "${QEMU_ACCEL}",
+    "-cpu", "${QEMU_CPU}",
 
     # Hard disk drive configuration
     "-drive", "driver=raw,if=none,id=boot,file.filename=${IMAGE}",
@@ -105,6 +107,7 @@ args = [
 
     # Hardware acceleration (KVM on Linux, HVF on macOS)
     "-accel", "${QEMU_ACCEL}",
+    "-cpu", "${QEMU_CPU}",
 
     # Hard disk drive configuration
     "-drive", "driver=raw,if=none,id=boot,file.filename=${IMAGE}",

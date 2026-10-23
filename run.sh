@@ -28,12 +28,17 @@ if [ ! -f "$BIOS" ]; then
 fi
 
 # Prefer KVM acceleration if available, otherwise fall back to TCG.
+# "-cpu host" is only valid with hardware acceleration; under TCG it is rejected,
+# so keep the emulated default there.
 ACCEL_ARGS=()
+CPU_ARGS=()
 if [ -w /dev/kvm ]; then
     ACCEL_ARGS=( -accel kvm )
+    CPU_ARGS=( -cpu host )
 else
     echo "⚠️  KVM unavailable, falling back to TCG emulation."
     ACCEL_ARGS=( -accel tcg,thread=multi )
+    CPU_ARGS=( -cpu qemu64 )
 fi
 
 qemu-system-x86_64 \
@@ -49,4 +54,5 @@ qemu-system-x86_64 \
   -audiodev "${QEMU_AUDIO_OPTS}" \
   -nic model=rtl8139,id=rtl8139,hostfwd=udp::1797-:1797,hostfwd=tcp::1797-:1797 \
   -object filter-dump,id=filter1,netdev=rtl8139,file=rtl8139.dump \
-  "${ACCEL_ARGS[@]}"
+  "${ACCEL_ARGS[@]}" \
+  "${CPU_ARGS[@]}"
