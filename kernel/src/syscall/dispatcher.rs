@@ -10,7 +10,7 @@
  *         Fabian Ruhland, Heinrich Heine University Duesseldorf, 2025-10-15
  */
 
-use core::arch::{naked_asm};
+use core::arch::naked_asm;
 use crate::syscall::functions::hello::sys_hello_world;
 use crate::syscall::user_api::SyscallFunction;
 
@@ -46,14 +46,42 @@ unsafe impl Sync for SyscallFunctionTable {}
 #[unsafe(naked)]
 pub extern "C" fn dispatch_syscall() {
     naked_asm!(
-        // TODO: Save all registers (except rax, which contains the syscall number)
+        // Save all registers (except rax, which contains the syscall number)
+        "push r8",
+        "push r9",
+        "push r10",
+        "push r11",
+        "push r12",
+        "push r13",
+        "push r14",
+        "push r15",
+        "push rbx",
+        "push rcx",
+        "push rdx",
+        "push rsi",
+        "push rdi",
+        "push rbp",
 
         // Call syscall handler (or syscall_abort for an invalid syscall number)
         "cmp rax, {NUM_SYSCALLS}",
         "jge syscall_abort",
         "call [{SYSCALL_TABLE} + rax * 8]",
 
-        // TODO: Restore all registers (except rax)
+        // Restore all registers (except rax)
+        "pop rbp",
+        "pop rdi",
+        "pop rsi",
+        "pop rdx",
+        "pop rcx",
+        "pop rbx",
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop r11",
+        "pop r10",
+        "pop r9",
+        "pop r8",
 
         // Return from interrupt
         "iretq",
