@@ -15,6 +15,7 @@ use core::fmt::Display;
 use core::sync::atomic::AtomicUsize;
 use crate::consts::STACK_SIZE;
 use crate::device::cpu;
+use crate::syscall::user_api::usr_thread_exit;
 use crate::thread::scheduler::scheduler;
 
 static THREAD_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -285,7 +286,7 @@ impl Thread {
     /// Called indirectly by using the prepared stack in 'switch_to_usermode'.
     fn kickoff_user_thread(&self) {
         ((*self).entry)();
-        loop {} // User threads may currently not exit
+        usr_thread_exit();
     }
 
     /// Get a pointer to the top of the given stack.

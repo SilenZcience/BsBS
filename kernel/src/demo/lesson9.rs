@@ -5,7 +5,10 @@
  * License: GPLv3
  */
 
-use crate::syscall::user_api::usr_hello_world;
+use alloc::format;
+use alloc::string::String;
+
+use crate::syscall::user_api::{usr_get_key_event, usr_get_system_time, usr_hello_world, usr_print, usr_thread_get_id, usr_thread_wait};
 use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
 
@@ -23,9 +26,42 @@ pub fn syscall_demo() {
 /// It reads a line from the keyboard, and once the user presses 'Enter',
 /// the given line and the current system time are printed to the terminal.
 fn syscall_test_thread() {
+    usr_print("System Call Demo!\n\n");
+
     usr_hello_world();
 
+    let system_time = usr_get_system_time();
+    usr_print(&format!("System Time: {}\n", system_time));
+
+    let thread_id = usr_thread_get_id();
+    usr_print(&format!("Thread ID: {}\n\n", thread_id));
+
+    usr_print("Type 'exit' to exit!\n");
     loop {
-        // TODO: Extend demo to show more system calls.
+        let mut input = String::new();
+
+        usr_print("Enter a line (press Enter to submit): \n");
+
+        loop {
+            let key = usr_get_key_event();
+            if let Some(key) = key && key.pressed() && key.ascii().is_some() {
+                let key_char = key.ascii().unwrap();
+                usr_print(&format!("[DBG] Key pressed: {}\n", key_char));
+                if key_char == '\r' {
+                    break;
+                } else {
+                    input.push(key_char);
+                }
+            }
+        }
+
+        if input == "exit" {
+            usr_print("Exiting syscall demo...\n");
+            usr_thread_wait(2000);
+            usr_print("Exited syscall demo successfully!\n");
+            break;
+        }
+
+        usr_print(&format!("You entered: {}\n", input));
     }
 }
