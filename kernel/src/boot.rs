@@ -41,6 +41,7 @@ mod shell;
 mod filesystem;
 mod sysinfo;
 mod paging;
+mod syscall;
 
 extern crate alloc;
 

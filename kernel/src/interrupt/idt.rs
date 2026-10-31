@@ -85,7 +85,7 @@ impl IdtEntry {
     /// Each entry has the same selector and options:
     /// The selector is the first entry in the GDT after the null descriptor (kernel code segment) -> 1 * 8 = 8.
     /// The options are always 'Present', 'DPL=0' and '64-bit interrupt gate'.
-    const fn new(offset: u64) -> IdtEntry {
+    const fn new_interrupt_gate(offset: u64) -> IdtEntry {
         IdtEntry {
             offset_low: offset as u16,          // offset bits 0..15
             selector: 8,                        // a code segment selector in GDT or LDT
@@ -97,10 +97,25 @@ impl IdtEntry {
         }
     }
 
+    /// Create a new IDT entry for a trap gate at the given offset.
+    /// This is used for system calls, which should be accessible from user mode (DPL=3).
+    const fn new_trap_gate(offset: u64) -> IdtEntry {
+        // https://wiki.osdev.org/Interrupt_Descriptor_Table#Interrupt_Gate
+        IdtEntry {
+            offset_low: offset as u16,          // offset bits 0..15
+            selector: 8,                        // a code segment selector in GDT or LDT
+            // gate type: 0b1111 for 64-bit trap gate == 0xF, DPL: 0b11 == 3, and Present bit: 1 -> 0b11101111 == 0xEF
+            options: 0xEF00u16,                 // gate type, dpl, and p fields
+            offset_mid: (offset >> 16) as u16,  // offset bits 16..31
+            offset_high: (offset >> 32) as u32, // offset bits 32..63
+            reserved: 0,                        // reserved
+        }
+    }
+
     /// Create a new IDT entry for an interrupt handler function.
     /// The function must be marked as 'extern "x86-interrupt"'.
     pub fn without_error_code(handler: extern "x86-interrupt" fn(InterruptStackFrame)) -> IdtEntry {
-        IdtEntry::new(handler as u64)
+        IdtEntry::new_interrupt_gate(handler as u64)
     }
 
     /// Create a new IDT entry for an interrupt handler function with an error code.
@@ -108,13 +123,7 @@ impl IdtEntry {
     /// This is only used for some CPU exceptions (e.g. Page Faults).
     /// See the OSDev wiki for a full list of exceptions: https://wiki.osdev.org/Exceptions
     pub fn with_error_code(handler: extern "x86-interrupt" fn(InterruptStackFrame, error_code: u64)) -> IdtEntry {
-        IdtEntry::new(handler as u64)
-    }
-
-    /// Create a new IDT entry for a trap gate at the given offset.
-    /// This is used for system calls, which should be accessible from user mode (DPL=3).
-    const fn new_trap_gate(offset: u64) -> IdtEntry {
-        todo!("IdtEntry::new_trap_gate() is not implemented yet!");
+        IdtEntry::new_interrupt_gate(handler as u64)
     }
 
     /// Create a new IDT entry for a syscall handler function.
@@ -288,7 +297,7 @@ impl Idt {
                 interrupt_handler!(0x7d, dispatch_interrupt),
                 interrupt_handler!(0x7e, dispatch_interrupt),
                 interrupt_handler!(0x7f, dispatch_interrupt),
-                interrupt_handler!(0x80, dispatch_interrupt),
+                IdtEntry::syscall_gate(crate::syscall::dispatcher::dispatch_syscall), // 0x80 handler
                 interrupt_handler!(0x81, dispatch_interrupt),
                 interrupt_handler!(0x82, dispatch_interrupt),
                 interrupt_handler!(0x83, dispatch_interrupt),
