@@ -5,8 +5,6 @@ use crate::device::cpu;
 use crate::library::format::format_size;
 use crate::shell::registry;
 
-const INFO_COL: usize  = 54;
-const VALUE_COL: usize = 66;
 
 const LOGO: [&str; 23] = [
     "                   *** ### ### ***",
@@ -32,7 +30,22 @@ const LOGO: [&str; 23] = [
     "           *##                         ##*",
     "               *##                 ##*",
     "                   *** ### ### ***",
-];
+    ];
+    const LOGO_WIDTH: usize = {
+        let mut max = 0;
+        let mut i = 0;
+        while i < LOGO.len() {
+            let len = LOGO[i].len();
+            if len > max {
+                max = len;
+            }
+            i += 1;
+        }
+        max
+    };
+    const INFO_COL: usize  = LOGO_WIDTH + 1;
+    const LABEL_WIDTH: usize = 12;
+    const VALUE_COL: usize = INFO_COL + LABEL_WIDTH;
 
 pub fn register() {
     registry::register("heinefetch", "Show system information", run);
@@ -79,8 +92,8 @@ fn run(_args: &[String]) {
 }
 
 fn push_entry(info: &mut Vec<String>, label: &str, value: &str, cols: usize) {
-    let label = format!("{:<width$}", label, width = VALUE_COL - INFO_COL);
-    let indent = " ".repeat(VALUE_COL - INFO_COL);
+    let label = format!("{:<width$}", label, width = LABEL_WIDTH);
+    let indent = " ".repeat(LABEL_WIDTH);
     let width = cols.saturating_sub(VALUE_COL).max(1);
 
     let mut rest = value;
