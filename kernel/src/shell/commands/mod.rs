@@ -16,9 +16,11 @@ mod ts;
 mod reboot;
 mod shutdown;
 mod speaker;
+mod syscall;
 mod text;
 mod thread;
 mod uptime;
+mod userthread;
 
 pub fn register_all() {
     help::register();
@@ -37,6 +39,8 @@ pub fn register_all() {
     speaker::register();
     coroutine::register();
     thread::register();
+    userthread::register();
+    syscall::register();
     cat::register();
     bitmap::register();
     gameboy::register();

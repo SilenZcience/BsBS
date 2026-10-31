@@ -7,19 +7,24 @@
 
 use alloc::format;
 use alloc::string::String;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use crate::syscall::user_api::{usr_get_key_event, usr_get_system_time, usr_hello_world, usr_print, usr_thread_get_id, usr_thread_wait};
 use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
 
+pub static DEMO_RUNNING: AtomicBool = AtomicBool::new(false);
+
 /// Start the syscall demo.
 /// It reads keyboard input and prints to the terminal from a user thread.
 pub fn syscall_demo() {
+    DEMO_RUNNING.store(true, Ordering::SeqCst);
+
     let thread = Thread::new_user_thread(syscall_test_thread);
     let scheduler = scheduler();
 
     scheduler.ready(thread);
-    scheduler.schedule();
+    scheduler.yield_cpu();
 }
 
 /// Thread function for the syscall demo.
@@ -46,7 +51,7 @@ fn syscall_test_thread() {
             let key = usr_get_key_event();
             if let Some(key) = key && key.pressed() && key.ascii().is_some() {
                 let key_char = key.ascii().unwrap();
-                usr_print(&format!("[DBG] Key pressed: {}\n", key_char));
+                // usr_print(&format!("[DBG] Key pressed: {}\n", key_char));
                 if key_char == '\r' {
                     break;
                 } else {
@@ -64,4 +69,6 @@ fn syscall_test_thread() {
 
         usr_print(&format!("You entered: {}\n", input));
     }
+
+    DEMO_RUNNING.store(false, Ordering::SeqCst);
 }

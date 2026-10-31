@@ -5,6 +5,8 @@
  *         Fabian Ruhland, Heinrich Heine University Duesseldorf, 2026-01-15
  * License: GPLv3
  */
+use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
 use log::info;
 use crate::coroutine::coroutine::Coroutine;
 use crate::device::pit;
@@ -13,11 +15,17 @@ use crate::device::terminal::terminal;
 use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
 
+pub static COROUTINES_RUNNING: AtomicBool = AtomicBool::new(false);
+pub static THREADS_RUNNING: AtomicUsize = AtomicUsize::new(0);
+const NUM_THREADS: usize = 5;
+
 /// A demo function showcasing coroutines.
 /// It starts three coroutines, each incrementing a counter and printing it to the terminal in an endless loop.
 /// The coroutines switch to the next coroutine after each print.
 /// the coroutines run on their own thread...
 pub fn coroutine_demo() {
+    COROUTINES_RUNNING.store(true, Ordering::SeqCst);
+
     let thread = Thread::new_kernel_thread(coroutine_demo_loop);
     info!("Started thread with ID={}", thread.id());
     scheduler().ready(thread);
@@ -47,6 +55,7 @@ fn coroutine_loop(coroutine: &mut Coroutine) {
     let start_time = pit::system_time();
     loop {
         if pit::system_time() - start_time >= 5000 {
+            COROUTINES_RUNNING.store(false, Ordering::SeqCst);
             scheduler().exit();
         }
 
@@ -67,6 +76,8 @@ fn coroutine_loop(coroutine: &mut Coroutine) {
 /// It starts three counter threads and one speaker thread.
 /// The PIT drives thread switching every 10ms.
 pub fn thread_demo() {
+    THREADS_RUNNING.store(NUM_THREADS, Ordering::SeqCst);
+
     let sched = scheduler();
 
     for _ in 0..5 {
@@ -74,16 +85,10 @@ pub fn thread_demo() {
         info!("Started thread with ID={}", thread.id());
         sched.ready(thread);
     }
-
-    // let speaker = Thread::new(speaker_thread);
-    // info!("Started speaker thread with ID={}", speaker.id());
-    // sched.ready(speaker);
-
 }
 
 /// The function executed by each counter thread.
-/// It increments a counter and prints it to the terminal,
-/// then waits 100ms to give the PIT a chance to switch threads.
+/// It increments a counter and prints it to the terminal
 fn counter_thread() {
     let id = scheduler().get_active_tid();
     let mut counter = 0usize;
@@ -110,6 +115,7 @@ fn counter_thread() {
                 print_terminal!(&mut term, "<Exited (Finished after {}ms)>", elapsed);
                 drop(term);
             }
+            THREADS_RUNNING.fetch_sub(1, Ordering::SeqCst);
             scheduler().exit();
         }
     }
