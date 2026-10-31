@@ -6,12 +6,16 @@ use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
 
 pub static THREADS_RUNNING: AtomicUsize = AtomicUsize::new(0);
+
+static NEXT_ROW: AtomicUsize = AtomicUsize::new(0);
+
 const NUM_THREADS: usize = 3;
 
 const SLEEP_DELAY: usize = 100;
 
 pub fn user_thread_demo() {
     THREADS_RUNNING.store(NUM_THREADS, Ordering::SeqCst);
+    NEXT_ROW.store(1, Ordering::SeqCst);
 
     let k1 = Thread::new_kernel_thread(kernel_thread);
     let u1 = Thread::new_user_thread(user_thread);
@@ -29,14 +33,18 @@ fn thread_finished() {
     THREADS_RUNNING.fetch_sub(1, Ordering::SeqCst);
 }
 
+fn next_row() -> usize {
+    NEXT_ROW.fetch_add(1, Ordering::SeqCst)
+}
+
 fn kernel_thread() {
-    let id = scheduler().get_active_tid();
+    let row = next_row();
     let cols = terminal().lock().size().0;
 
     for i in 0..cols - 1 {
         {
             let mut terminal = terminal().lock();
-            terminal.set_pos(i, id);
+            terminal.set_pos(i, row);
             terminal.put_char('K');
         }
 
@@ -47,13 +55,13 @@ fn kernel_thread() {
 }
 
 fn user_thread() {
-    let id = scheduler().get_active_tid();
+    let row = next_row();
     let cols = terminal().lock().size().0;
 
     for i in 0..cols - 1 {
         {
             let mut terminal = terminal().lock();
-            terminal.set_pos(i, id);
+            terminal.set_pos(i, row);
             terminal.put_char('U');
         }
 
