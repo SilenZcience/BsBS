@@ -4,3 +4,4 @@ pub mod lesson4;
 pub mod lesson6;
 pub mod lesson6fs;
 pub mod lesson8;
+pub mod lesson9;
