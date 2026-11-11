@@ -60,7 +60,12 @@
             "type": "shell",
             "isBackground": true,
             "command": "cargo",
-            "args": [ "make", "--no-workspace", "debug" ],
+            // The debug task / gdb needs QEMU's TCG emulator
+            // (commit 1edab9e broke debugging by adding --accel)
+            "args": [ "make", "--no-workspace",
+                "--env", "QEMU_ACCEL=tcg,thread=multi",
+                "--env", "QEMU_CPU=qemu64",
+                "debug" ],
             "problemMatcher": [
                 {
                     "pattern": [
