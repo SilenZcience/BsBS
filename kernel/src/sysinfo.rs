@@ -36,7 +36,7 @@ pub fn memory_stats() -> Option<MemoryStats> {
     let mut usable = 0u64;
 
     for desc in map.entries() {
-        let bytes = desc.page_count * 4096;
+        let bytes = desc.page_count * crate::consts::PAGE_SIZE as u64;
         total += bytes;
         if desc.ty == MemoryType::CONVENTIONAL {
             usable += bytes;
