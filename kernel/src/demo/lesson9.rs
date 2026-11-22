@@ -9,7 +9,10 @@ use alloc::format;
 use alloc::string::String;
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::syscall::user_api::{usr_get_key_event, usr_get_system_time, usr_hello_world, usr_print, usr_thread_get_id, usr_thread_wait};
+use crate::syscall::user_api::{
+    _fast_usr_get_key_event, _fast_usr_get_system_time, _fast_usr_hello_world, _fast_usr_print,
+    _fast_usr_thread_get_id, _fast_usr_thread_wait,
+};
 use crate::thread::scheduler::scheduler;
 use crate::thread::thread::Thread;
 
@@ -31,27 +34,27 @@ pub fn syscall_demo() {
 /// It reads a line from the keyboard, and once the user presses 'Enter',
 /// the given line and the current system time are printed to the terminal.
 fn syscall_test_thread() {
-    usr_print("System Call Demo!\n\n");
+    _fast_usr_print("System Call Demo!\n\n");
 
-    usr_hello_world();
+    _fast_usr_hello_world();
 
-    let system_time = usr_get_system_time();
-    usr_print(&format!("System Time: {}\n", system_time));
+    let system_time = _fast_usr_get_system_time();
+    _fast_usr_print(&format!("System Time: {}\n", system_time));
 
-    let thread_id = usr_thread_get_id();
-    usr_print(&format!("Thread ID: {}\n\n", thread_id));
+    let thread_id = _fast_usr_thread_get_id();
+    _fast_usr_print(&format!("Thread ID: {}\n\n", thread_id));
 
-    usr_print("Type 'exit' to exit!\n");
+    _fast_usr_print("Type 'exit' to exit!\n");
     loop {
         let mut input = String::new();
 
-        usr_print("Enter a line (press Enter to submit): \n");
+        _fast_usr_print("Enter a line (press Enter to submit): \n");
 
         loop {
-            let key = usr_get_key_event();
+            let key = _fast_usr_get_key_event();
             if let Some(key) = key && key.pressed() && key.ascii().is_some() {
                 let key_char = key.ascii().unwrap();
-                // usr_print(&format!("[DBG] Key pressed: {}\n", key_char));
+                // _fast_usr_print(&format!("[DBG] Key pressed: {}\n", key_char));
                 if key_char == '\r' {
                     break;
                 } else {
@@ -61,13 +64,13 @@ fn syscall_test_thread() {
         }
 
         if input == "exit" {
-            usr_print("Exiting syscall demo...\n");
-            usr_thread_wait(2000);
-            usr_print("Exited syscall demo successfully!\n");
+            _fast_usr_print("Exiting syscall demo...\n");
+            _fast_usr_thread_wait(2000);
+            _fast_usr_print("Exited syscall demo successfully!\n");
             break;
         }
 
-        usr_print(&format!("You entered: {}\n", input));
+        _fast_usr_print(&format!("You entered: {}\n", input));
     }
 
     DEMO_RUNNING.store(false, Ordering::SeqCst);

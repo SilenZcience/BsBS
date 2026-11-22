@@ -120,6 +120,9 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     // Load the Global Descriptor Table (code in boot.asm)
     unsafe { load_gdt(); }
 
+    info!("Initializing fast system calls");
+    syscall::dispatcher::init_fast_syscalls();
+
     // This is only a temporary solution, as we will implement our own page tables in a later assignment.
     setup_initial_paging();
 
