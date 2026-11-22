@@ -74,7 +74,7 @@ pub extern "C" fn dispatch_syscall() {
 
         // Call syscall handler (or syscall_abort for an invalid syscall number)
         "cmp rax, {NUM_SYSCALLS}",
-        "jge syscall_abort",
+        "jae syscall_abort",
         "call [{SYSCALL_TABLE} + rax * 8]",
 
         // Restore all registers (except rax)
