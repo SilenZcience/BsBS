@@ -83,12 +83,12 @@ impl IdtDescriptor {
 impl IdtEntry {
     /// Create a new IDT entry for an interrupt handler at the given offset.
     /// Each entry has the same selector and options:
-    /// The selector is the first entry in the GDT after the null descriptor (kernel code segment) -> 1 * 8 = 8.
+    /// The selector is the kernel code segment descriptor in the GDT -> 4 * 8 = 0x20.
     /// The options are always 'Present', 'DPL=0' and '64-bit interrupt gate'.
     const fn new_interrupt_gate(offset: u64) -> IdtEntry {
         IdtEntry {
             offset_low: offset as u16,          // offset bits 0..15
-            selector: 8,                        // a code segment selector in GDT or LDT
+            selector: 4 * 8,                    // kernel code segment selector
             // gate type: 0b1110 for 64-bit interrupt gate == 0xE, DPL: 0b00 == 0, and Present bit: 1 -> 0b10001110 == 0x8E
             options: 0x8E00u16,                 // gate type, dpl, and p fields
             offset_mid: (offset >> 16) as u16,  // offset bits 16..31
@@ -103,7 +103,7 @@ impl IdtEntry {
         // https://wiki.osdev.org/Interrupt_Descriptor_Table#Interrupt_Gate
         IdtEntry {
             offset_low: offset as u16,          // offset bits 0..15
-            selector: 8,                        // a code segment selector in GDT or LDT
+            selector: 4 * 8,                    // kernel code segment selector
             // gate type: 0b1111 for 64-bit trap gate == 0xF, DPL: 0b11 == 3, and Present bit: 1 -> 0b11101111 == 0xEF
             options: 0xEF00u16,                 // gate type, dpl, and p fields
             offset_mid: (offset >> 16) as u16,  // offset bits 16..31

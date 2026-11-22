@@ -172,15 +172,15 @@ load_gdt:
     mov gs, ax
 
     ; Load TSS register with the TSS descriptor
-    mov ax, (5 * 0x08)
+    mov ax, (6 * 0x08)
     ltr ax
 
     ; Load data segment selector into stack segment register
-    mov ax, (2 * 0x08)
+    mov ax, (5 * 0x08)
     mov ss, ax
 
     ; Jump into code segment
-    push (1 * 0x08)
+    push (4 * 0x08)
     push qword load_cs_jmp
     retfq
 
@@ -222,8 +222,34 @@ gdt:
     ; Present=1, DPL(2bit), SystemSegment=0, Type=(0:Data/1:Kernel), Direction(grows up/down), ReadWriteBit, Accessed=0, Base 16:23
     ; Base 24:31, Granulatiry(0:Bytes/1:Pages), D/BprotectedMode(0:16/1:32), LongMode, AVL, Limit 16:19
 
+    ; On 'syscall', the CPU loads CS with the selector in STAR[32:47] and SS with STAR[32:47] + 8
+    ; On 'sysret' , the CPU loads SS with (STAR[48:63] + 8) | 3 and CS with (STAR[48:63] + 16) | 3
+    ;
+    ; The required layout for fast system calls:
+    ; 0x00: Null-Descriptor
+    ; 0x08: Unused (base for the user selectors written to the STAR-MSR)
+    ; 0x10: User data segment (0x13 with RPL=3)
+    ; 0x18: User code segment  (0x1B with RPL=3)
+    ; 0x20: Kernel code segment
+    ; 0x28: Kernel data segment
+    ; 0x30: TSS descriptor (double size)
 
     dw  0, 0, 0, 0  ; Null descriptor
+
+    ; Empty descriptor; base selector for the user data/code segments (STAR-MSR)
+    dw  0, 0, 0, 0
+
+    ; User data segment descriptor
+    dw  0xffff     ; Limit [00:15] = 0xffff (4 GiB)
+    dw  0x0000     ; Base  [00:15] = 0
+    dw  0xf200     ; Base  [16:23] = 0; Access Byte = { Data Segment, Writable, DPL = 3, Present }
+    dw  0x00cf     ; Limit [16:19] = 0xf; Base [31:24] = 0; Flags = { Granularity = 4 KiB, Long Mode }
+
+    ; User code segment descriptor
+    dw  0xffff     ; Limit [00:15] = 0xffff (4 GiB)
+    dw  0x0000     ; Base  [00:15] = 0
+    dw  0xfa00     ; Base  [16:23] = 0; Access Byte = { Code Segment, Readable, DPL = 3, Present }
+    dw  0x00af     ; Limit [16:19] = 0xf; Base [31:24] = 0; Flags = { Granularity = 4 KiB, Long Mode }
 
     ; Kernel code segment descriptor
     dw  0xffff     ; Limit [00:15] = 0xffff (4 GiB)
@@ -235,18 +261,6 @@ gdt:
     dw  0xffff     ; Limit [00:15] = 0xffff (4 GiB)
     dw  0x0000     ; Base  [00:15] = 0
     dw  0x9200     ; Base  [16:23] = 0; Access Byte = { Data Segment, Writable, DPL = 0, Present }
-    dw  0x00cf     ; Limit [16:19] = 0xf; Base [31:24] = 0; Flags = { Granularity = 4 KiB, Long Mode }
-
-    ; User code segment descriptor
-    dw  0xffff     ; Limit [00:15] = 0xffff (4 GiB)
-    dw  0x0000     ; Base  [00:15] = 0
-    dw  0xfa00     ; Base  [16:23] = 0; Access Byte = { Code Segment, Readable, DPL = 3, Present }
-    dw  0x00af     ; Limit [16:19] = 0xf; Base [31:24] = 0; Flags = { Granularity = 4 KiB, Long Mode }
-
-    ; User data segment descriptor
-    dw  0xffff     ; Limit [00:15] = 0xffff (4 GiB)
-    dw  0x0000     ; Base  [00:15] = 0
-    dw  0xf200     ; Base  [16:23] = 0; Access Byte = { Data Segment, Writable, DPL = 3, Present }
     dw  0x00cf     ; Limit [16:19] = 0xf; Base [31:24] = 0; Flags = { Granularity = 4 KiB, Long Mode }
 
     ; Task state segment descriptor TSSD
@@ -267,7 +281,7 @@ gdt:
 ; Descriptor for the GDT
 align 8
 gdt_descriptor:
-    dw 7 * 8 - 1    ; GDT has 6 entries of 8 bytes each (tss has double size!); Limit = size - 1
+    dw 8 * 8 - 1    ; GDT has 7 entries of 8 bytes each (tss has double size!); Limit = size - 1
     dq gdt          ; Address of the GDT
 
 tss:

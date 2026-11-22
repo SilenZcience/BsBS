@@ -169,7 +169,7 @@ impl Thread {
     fn switch_to_usermode(&mut self) {
         // segment offset + RPL
         const USER_CODE_SELECTOR: u64 = 3 * 8 + 3; // 0x1b
-        const USER_DATA_SELECTOR: u64 = 4 * 8 + 3; // 0x23
+        const USER_DATA_SELECTOR: u64 = 2 * 8 + 3; // 0x13
 
         // enable interrupts
         const USER_RFLAGS: u64 = 0x202;
