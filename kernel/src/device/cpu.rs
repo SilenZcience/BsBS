@@ -247,6 +247,39 @@ pub fn write_cr0 (flags: Cr0Flags) {
     }
 }
 
+/// https://wiki.osdev.org/Model_Specific_Registers
+
+/// Read a model specific register (MSR).
+/// The MSR number is passed in ECX and the 64-bit value is returned in EDX:EAX.
+#[inline]
+pub fn read_msr(msr: u32) -> u64 {
+    let low: u32;
+    let high: u32;
+    unsafe {
+        asm!("rdmsr",
+        in("ecx") msr,
+        out("eax") low,
+        out("edx") high,
+        );
+    }
+    ((high as u64) << 32) | (low as u64)
+}
+
+/// Write a model specific register (MSR).
+/// The MSR number is passed in ECX and the 64-bit value is expected in EDX:EAX.
+#[inline]
+pub fn write_msr(msr: u32, value: u64) {
+    let low = (value & 0xffffffff) as u32;
+    let high = (value >> 32) as u32;
+    unsafe {
+        asm!("wrmsr",
+        in("ecx") msr,
+        in("eax") low,
+        in("edx") high,
+        );
+    }
+}
+
 
 /// Execute a closure without interrupts
 #[inline]
