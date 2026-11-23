@@ -46,7 +46,7 @@ mod syscall;
 
 extern crate alloc;
 
-use crate::consts::{heap_start, kernel_end, HEAP_SIZE, PAGE_SIZE};
+use crate::consts::{kernel_end, HEAP_SIZE, PAGE_SIZE};
 use crate::paging::frames::{FRAME_ALLOCATOR, PhysAddr};
 use crate::paging::pages::setup_initial_paging;
 use crate::thread::scheduler::scheduler;
@@ -131,7 +131,10 @@ pub extern "C" fn main(multiboot_magic: u32, multiboot: &multiboot::BootInfo) ->
     sysinfo::set_memory_map(memory_map);
 
     info!("Initializing heap allocator");
-    allocator::global::init_allocator(heap_start(), HEAP_SIZE);
+    let heap_start = unsafe {
+        FRAME_ALLOCATOR.lock().alloc_block(HEAP_SIZE / PAGE_SIZE).unwrap()
+    };
+    allocator::global::init_allocator(heap_start.raw() as usize, HEAP_SIZE);
 
     if let Some(name_tag) = multiboot.find_tag::<multiboot::BootLoaderNameTag>(multiboot::TagType::BootLoaderName) {
         sysinfo::set_bootloader_name(name_tag.as_str());
