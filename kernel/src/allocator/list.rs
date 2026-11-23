@@ -241,7 +241,7 @@ impl LinkedListAllocator {
 
     /// Free the memory block at the given pointer with the given layout.
     pub unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
-        let (size, _) = LinkedListAllocator::size_align(layout);
+        let (size, _) = Self::size_align(layout);
 
         unsafe {
             self.add_free_block(ptr as usize, size)
