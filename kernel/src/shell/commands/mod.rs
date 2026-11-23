@@ -4,6 +4,7 @@ mod clear;
 mod coroutine;
 mod cpuinfo;
 mod echo;
+mod frames;
 mod gameboy;
 mod heap;
 mod heinefetch;
@@ -33,6 +34,7 @@ pub fn register_all() {
     kill::register();
     ls::register();
     echo::register();
+    frames::register();
     text::register();
     keyboard::register();
     heap::register();
